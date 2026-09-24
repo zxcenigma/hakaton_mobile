@@ -11,7 +11,7 @@ class PetApp extends StatelessWidget {
     return MaterialApp(
       title: 'Лавандовый котик',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
+      theme: AppTheme.dark,
       home: const HomeScreen(),
     );
   }

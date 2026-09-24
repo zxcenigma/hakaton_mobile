@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppPalette {
+  static const stageBackground = Color(0xFF211E1C);
+  static const stageLight = Color(0xFF51463D);
+  static const podiumTop = Color(0xFF716052);
+  static const podiumEdge = Color(0xFF302923);
+  static const gold = Color(0xFFE5C78F);
+  static const darkGold = Color(0xFF463A28);
+  static const rose = Color(0xFFD7AAA0);
+  static const ceramic = Color(0xFFF0DDC3);
+  static const ceramicShade = Color(0xFFC4AA8E);
   static const background = Color(0xFFF7F3FC);
   static const surface = Color(0xFFFFFBFF);
   static const purple = Color(0xFF7861A8);
@@ -49,6 +58,37 @@ abstract final class AppTheme {
     ),
     iconButtonTheme: IconButtonThemeData(
       style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
+    ),
+  );
+
+  static final dark = light.copyWith(
+    colorScheme: const ColorScheme.dark(
+      primary: AppPalette.gold,
+      onPrimary: AppPalette.stageBackground,
+      primaryContainer: AppPalette.darkGold,
+      onPrimaryContainer: AppPalette.gold,
+      secondary: AppPalette.ceramicShade,
+      onSecondary: AppPalette.stageBackground,
+      secondaryContainer: AppPalette.stageLight,
+      onSecondaryContainer: AppPalette.ceramic,
+      surface: AppPalette.stageBackground,
+      onSurface: AppPalette.ceramic,
+      onSurfaceVariant: AppPalette.ceramicShade,
+    ),
+    scaffoldBackgroundColor: AppPalette.stageBackground,
+    textTheme: light.textTheme.apply(
+      bodyColor: AppPalette.ceramic,
+      displayColor: AppPalette.gold,
+    ),
+    iconTheme: const IconThemeData(color: AppPalette.gold),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: AppPalette.stageBackground,
+    ),
+    listTileTheme: const ListTileThemeData(
+      textColor: AppPalette.ceramic,
+      iconColor: AppPalette.gold,
+      selectedColor: AppPalette.gold,
+      selectedTileColor: AppPalette.darkGold,
     ),
   );
 }
