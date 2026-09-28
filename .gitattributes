@@ -1,0 +1,9 @@
+# Deliberately narrow: this repository holds a Flutter app and a backend owned
+# by other people, and a repo-wide `text=auto eol=lf` would rewrite the line
+# endings of every file they have open. It is worth doing — just not as a
+# side-effect of an unrelated change.
+#
+# These two paths are read by Linux (GitHub Actions, Docker), where a CRLF
+# shell script fails with `bad interpreter`, so they are pinned here.
+.github/** text eol=lf
+ml_service/** text=auto eol=lf

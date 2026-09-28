@@ -1,0 +1,14 @@
+{
+  "identities": [
+    {
+      "name": "monetka",
+      "credentials": [
+        {
+          "accessKey": "monetkalocal",
+          "secretKey": "monetkalocal"
+        }
+      ],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

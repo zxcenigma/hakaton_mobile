@@ -1,0 +1,15 @@
+apiVersion: 1
+
+providers:
+  - name: monetka
+    orgId: 1
+    folder: Монетка
+    type: file
+    disableDeletion: false
+    # Dashboards are version-controlled JSON, not clicked together in the UI —
+    # otherwise the one that matters is the one nobody can reproduce.
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

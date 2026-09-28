@@ -1,0 +1,45 @@
+{
+  "type": "record",
+  "name": "PurchaseMadePayload",
+  "namespace": "ru.mos.monetka.events.v1",
+  "doc": "Payload of purchase_made",
+  "fields": [
+    {
+      "name": "item_id",
+      "type": "string"
+    },
+    {
+      "name": "item_category",
+      "type": {
+        "type": "map",
+        "values": "string"
+      }
+    },
+    {
+      "name": "price",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "balance_before",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "balance_after",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "effects",
+      "type": [
+        "null",
+        {
+          "type": "array",
+          "items": "string"
+        }
+      ],
+      "default": null
+    }
+  ]
+}

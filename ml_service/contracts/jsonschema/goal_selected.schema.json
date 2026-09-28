@@ -1,0 +1,35 @@
+{
+  "$id": "ru.mos.monetka.events.v1.goal_selected",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "goal_cost": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Goal Cost",
+      "type": "integer"
+    },
+    "goal_id": {
+      "pattern": "^[a-z0-9_]{3,40}$",
+      "title": "Goal Id",
+      "type": "string"
+    },
+    "savings_at_selection": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Savings At Selection",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "goal_id",
+    "goal_cost",
+    "savings_at_selection"
+  ],
+  "title": "GoalSelectedPayload",
+  "type": "object",
+  "x-monetka-event": "goal_selected",
+  "x-monetka-schema-version": 1
+}

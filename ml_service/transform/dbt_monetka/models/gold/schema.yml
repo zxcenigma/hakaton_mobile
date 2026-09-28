@@ -1,0 +1,166 @@
+version: 2
+
+models:
+  - name: mart_period_summary
+    description: >-
+      The grain of the platform: one row per profile × closed game period.
+      Plan versus fact, every decision, and the pet outcome.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [profile_pseudo_id, period_no]
+    columns:
+      - name: profile_pseudo_id
+        data_tests: [not_null]
+      - name: period_no
+        data_tests: [not_null]
+
+      - name: essential_coverage
+        description: Share of mandatory needs covered, 0–1.
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range: { min_value: 0, max_value: 1, inclusive: true }
+
+      - name: plan_adherence
+        description: 1.0 when fact matched plan exactly. Shown to the child, so it
+          must stay a plain formula (ТЗ §2.2).
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range: { min_value: 0, max_value: 1, inclusive: true }
+
+      - name: leftover
+        description: Coins left at period close. Negative would mean the app allowed
+          an overdraft, which ТЗ §2.5.6 forbids outright.
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range: { min_value: 0 }
+
+      - name: unallocated
+        description: Available minus everything planned. Negative would mean the plan
+          over-allocated the budget — impossible per ТЗ §2.5.5.
+        data_tests:
+          - dbt_utils.accepted_range: { min_value: 0 }
+
+      - name: coins_spent
+        data_tests:
+          - dbt_utils.accepted_range: { min_value: 0 }
+
+  - name: mart_player_behaviour_features
+    description: Point-in-time features for the behaviour-segment model.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [profile_pseudo_id, period_no]
+    columns:
+      - name: savings_regularity
+        data_tests:
+          - dbt_utils.accepted_range: { min_value: 0, max_value: 1, inclusive: true }
+      - name: plan_adherence_volatility
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range: { min_value: 0 }
+      - name: periods_completed
+        data_tests:
+          - dbt_utils.accepted_range: { min_value: 1 }
+      - name: is_training_eligible
+        description: False until the rolling window is full; training filters on it.
+        data_tests: [not_null]
+
+  - name: mart_quest_effectiveness
+    description: Per-quest teaching effectiveness for the methodologist.
+    columns:
+      - name: quest_id
+        data_tests: [unique, not_null]
+      - name: topic
+        data_tests:
+          - accepted_values: { values: ["budgeting", "saving", "payments"] }
+      - name: optimal_rate
+        data_tests:
+          - dbt_utils.accepted_range: { min_value: 0, max_value: 1, inclusive: true }
+      - name: total_attempts
+        data_tests:
+          - dbt_utils.accepted_range: { min_value: 1 }
+
+  - name: mart_goal_progress
+    description: Savings progress per profile × goal, with the deterministic ETA.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [profile_pseudo_id, goal_id]
+    columns:
+      - name: goal_cost
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range: { min_value: 1 }
+      - name: remaining_to_goal
+        description: Never negative — a goal cannot be more than reached.
+        data_tests:
+          - dbt_utils.accepted_range: { min_value: 0 }
+      - name: deposit_regularity
+        data_tests:
+          - dbt_utils.accepted_range: { min_value: 0, max_value: 1, inclusive: true }
+      - name: eta_periods
+        description: NULL when nothing has been deposited yet — by design, the app
+          then invites a first deposit instead of showing an infinite estimate.
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              # NULLs are expected and must not fail the test.
+              config:
+                where: "eta_periods is not null"
+
+  - name: mart_economy_health
+    description: Per-period diagnostics of the game economy.
+    columns:
+      - name: period_no
+        data_tests: [unique, not_null]
+      - name: active_profiles
+        data_tests:
+          - dbt_utils.accepted_range: { min_value: 1 }
+      - name: share_essentials_covered
+        data_tests:
+          - dbt_utils.accepted_range: { min_value: 0, max_value: 1, inclusive: true }
+
+  - name: mart_model_performance
+    description: Production health of the deployed model, plus the outcome in the
+      period following each hint, split by model arm and rule arm.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [period_no, advisor_arm]
+    columns:
+      - name: advisor_arm
+        description: Randomly assigned cohort — the unit of the unbiased outcome
+          comparison. Not the same as whether a model chose a given hint.
+        data_tests:
+          - not_null
+          - accepted_values: { values: ["rule", "model"] }
+      - name: consult_rate
+        description: Share of this cohort's hints the model actually chose. In
+          the control cohort it must be zero.
+        data_tests:
+          - dbt_utils.accepted_range: { min_value: 0, max_value: 1, inclusive: true }
+      - name: hints_shown
+        data_tests:
+          - dbt_utils.accepted_range: { min_value: 1 }
+      - name: p95_latency_ms
+        description: On-device inference budget. ТЗ §3.4 allows a second for a
+          visible response; a model taking anywhere near that is broken.
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1000
+              config:
+                where: "p95_latency_ms is not null"
+      - name: outcome_sample_size
+        data_tests:
+          - dbt_utils.accepted_range: { min_value: 0 }
+
+  - name: mart_competency_coverage
+    description: What each child has practised — the adult section's data source.
+    columns:
+      - name: profile_pseudo_id
+        data_tests: [unique, not_null]
+      - name: topics_covered
+        description: ТЗ §2.5.8 mandates three topics; this must never exceed three.
+        data_tests:
+          - dbt_utils.accepted_range: { min_value: 0, max_value: 3, inclusive: true }
+      - name: periods_played
+        data_tests:
+          - dbt_utils.accepted_range: { min_value: 0 }

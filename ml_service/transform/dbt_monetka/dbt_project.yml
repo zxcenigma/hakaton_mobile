@@ -1,0 +1,34 @@
+name: dbt_monetka
+version: 1.0.0
+config-version: 2
+
+profile: monetka
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+# The gold layer is the only thing dbt owns. Bronze and silver are built by the
+# ingestion code, because they need envelope validation and dead-lettering that
+# SQL cannot express. dbt takes over exactly where the data becomes well-typed.
+models:
+  dbt_monetka:
+    gold:
+      +materialized: table
+      +schema: gold
+      # DuckDB locally, Trino/Iceberg in the compose stack — the SQL is written
+      # against the intersection of both dialects so the same models run on either.
+      +tags: ["gold"]
+
+vars:
+  # ТЗ §2.5.13 — demo-mode traffic is for expert review, never for analytics.
+  exclude_demo_mode: true
+  # Rolling window used for behaviour features and growth-stage decisions.
+  behaviour_window_periods: 3
+
+on-run-end:
+  - "{{ log('gold layer rebuilt: ' ~ results | length ~ ' models', info=true) }}"

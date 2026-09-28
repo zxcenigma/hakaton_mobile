@@ -1,0 +1,47 @@
+{
+  "type": "record",
+  "name": "SavingsWithdrawnPayload",
+  "namespace": "ru.mos.monetka.events.v1",
+  "doc": "ТЗ §2.5.7 — withdrawal requires a separate explicit confirmation, and the\nconsequence is shown before it happens.",
+  "fields": [
+    {
+      "name": "goal_id",
+      "type": "string"
+    },
+    {
+      "name": "amount",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "savings_after",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "balance_after",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "confirmed",
+      "type": "boolean"
+    },
+    {
+      "name": "eta_periods_before",
+      "type": [
+        "null",
+        "long"
+      ],
+      "default": null
+    },
+    {
+      "name": "eta_periods_after",
+      "type": [
+        "null",
+        "long"
+      ],
+      "default": null
+    }
+  ]
+}

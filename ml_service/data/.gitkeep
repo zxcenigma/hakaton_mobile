@@ -1,0 +1,4 @@
+# This directory is bind-mounted into the API, the ingestor and Airflow. Docker
+# creates a missing bind-mount source itself — owned by root, which the
+# containers (uid 999) cannot write to — so the directory has to exist in a
+# fresh clone. Its contents stay ignored; only this placeholder is tracked.

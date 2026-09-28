@@ -1,0 +1,229 @@
+{
+  "uid": "monetka-model-serving",
+  "title": "Монетка — обслуживание модели",
+  "description": "Operational health of the inference service. Everything here is available without labels, which is what makes it useful the moment a release goes out.",
+  "tags": ["monetka", "ml", "serving"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "editable": false,
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Запросов за подсказкой",
+      "description": "Total advisor calls. A drop to zero means the app stopped asking, not that the model is fine.",
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(increase(monetka_inference_total[$__range]))",
+          "legendFormat": "всего",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "#E5C78F" },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Доля ответов модели",
+      "description": "Share of hints the model chose rather than the rules. Low is not an error: the model may only act where the rules are indifferent. Zero means personalisation is effectively off.",
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(increase(monetka_inference_total{source=\"model\"}[$__range])) / clamp_min(sum(increase(monetka_inference_total[$__range])), 1)",
+          "legendFormat": "модель",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#D7AAA0", "value": null },
+              { "color": "#E5C78F", "value": 0.05 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Отказов модели (вне горизонта)",
+      "description": "Abstentions because the period is past the model's validated horizon. Expected and healthy — the model declining to guess is the designed behaviour, not a failure.",
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(increase(monetka_inference_total{source=\"abstain_out_of_range\"}[$__range]))",
+          "legendFormat": "отказы",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "#C4AA8E" },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Задержка инференса, p95",
+      "description": "On-device budget is 50 ms. ТЗ §3.4 allows a second for a visible response; a model near that has already ruined the interaction.",
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(monetka_inference_latency_seconds_bucket[5m]))) * 1000",
+          "legendFormat": "p95",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#E5C78F", "value": null },
+              { "color": "#D7AAA0", "value": 50 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Источник подсказки во времени",
+      "description": "Rule and model arms side by side. A sudden collapse of the model line is a deployment problem; a gradual change usually means the population moved.",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum by (source) (rate(monetka_inference_total[5m]))",
+          "legendFormat": "{{source}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "lineWidth": 2, "fillOpacity": 12, "showPoints": "never" }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "model" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#E5C78F" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "rule" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#C4AA8E" } }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Задержка инференса по перцентилям",
+      "description": "p50 next to p95: a p50 that is fine while p95 climbs is a tail problem, usually cold starts rather than the model itself.",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le, model) (rate(monetka_inference_latency_seconds_bucket[5m]))) * 1000",
+          "legendFormat": "p50 {{model}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, model) (rate(monetka_inference_latency_seconds_bucket[5m]))) * 1000",
+          "legendFormat": "p95 {{model}}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": { "lineWidth": 2, "fillOpacity": 0, "showPoints": "never" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "transparent", "value": null },
+              { "color": "#D7AAA0", "value": 50 }
+            ]
+          },
+          "custom.thresholdsStyle": { "mode": "dashed" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      }
+    },
+    {
+      "id": 7,
+      "type": "text",
+      "title": "Как читать этот дашборд",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 14 },
+      "options": {
+        "mode": "markdown",
+        "content": "**Этот дашборд отвечает на один вопрос: исправна ли выкладка.** Он не отвечает на вопрос, приносит ли модель пользу — для этого нужна витрина `gold.mart_model_performance` и команда `monetka monitor`, которая сравнивает случайно назначенные группы.\n\n| Что видно | Что это значит |\n|---|---|\n| Доля ответов модели упала до нуля | Модель не загрузилась или просела по задержке — приложение перешло на правила. Игровой цикл цел, персонализации нет. |\n| Отказы вне горизонта растут | Нормально: когорта взрослеет, архетипы сходятся, модель честно не отвечает. |\n| p95 выше 50 мс | Бюджет инференса на устройстве превышен. Смотреть размер модели и холодный старт. |\n| Все подсказки одинаковые | Схлопывание: почти всегда сломанный конвейер признаков. |\n\nСервер **не на критическом пути** игры: обязательный сценарий работает офлайн, на устройстве (ТЗ §3.1.5)."
+      }
+    }
+  ]
+}

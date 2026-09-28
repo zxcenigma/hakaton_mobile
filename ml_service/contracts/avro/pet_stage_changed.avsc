@@ -1,0 +1,30 @@
+{
+  "type": "record",
+  "name": "PetStageChangedPayload",
+  "namespace": "ru.mos.monetka.events.v1",
+  "doc": "Payload of pet_stage_changed",
+  "fields": [
+    {
+      "name": "stage_before",
+      "type": {
+        "type": "map",
+        "values": "string"
+      }
+    },
+    {
+      "name": "stage_after",
+      "type": {
+        "type": "map",
+        "values": "string"
+      }
+    },
+    {
+      "name": "reason_code",
+      "type": "string"
+    },
+    {
+      "name": "periods_considered",
+      "type": "long"
+    }
+  ]
+}

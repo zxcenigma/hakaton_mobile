@@ -1,0 +1,170 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "monetka-data-platform"
+version = "0.1.0"
+description = "Data & ML platform for «Монетка» — a financial-literacy virtual-pet app for children aged 7-11"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = { text = "MIT" }
+authors = [{ name = "Monetka Team" }]
+keywords = ["data-engineering", "mlops", "lakehouse", "financial-literacy", "edtech"]
+
+dependencies = [
+  # --- core ---
+  "pydantic>=2.7,<3",
+  "pydantic-settings>=2.3,<3",
+  "structlog>=24.1",
+  "typer>=0.12",
+  "rich>=13.7",
+  "python-dotenv>=1.0",
+  # --- data ---
+  "duckdb>=1.0",
+  "pyarrow>=16.0",
+  "pandas>=2.2",
+  "numpy>=1.26",
+  "polars>=1.0",
+  # --- ml ---
+  # HistGradientBoosting from scikit-learn rather than LightGBM: same family of
+  # algorithm, and it converts to ONNX through skl2onnx without an extra
+  # toolchain. The export path is what actually has to work — these models run
+  # on a mid-range phone, not on a server.
+  "scikit-learn>=1.5",
+  "scipy>=1.13",
+  "threadpoolctl>=3.5",
+  "onnx>=1.16",
+  "onnxruntime>=1.18",
+  "skl2onnx>=1.16",
+  # --- serving ---
+  "fastapi>=0.111",
+  "uvicorn[standard]>=0.30",
+  "prometheus-client>=0.20",
+  # --- content ---
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+stream = [
+  "confluent-kafka>=2.4",
+  "fastavro>=1.9",
+]
+lake = [
+  # Iceberg is reached through Trino (dbt-trino), not through a Python client;
+  # these are for object storage access from the ingestion side only.
+  "s3fs>=2024.6",
+  "boto3>=1.34",
+]
+orchestration = [
+  "apache-airflow==2.9.3",
+]
+transform = [
+  "dbt-core>=1.8",
+  "dbt-duckdb>=1.8",
+  "dbt-trino>=1.8",
+]
+# Deliberately absent, and worth saying why — each was considered and dropped
+# rather than forgotten:
+#
+#   great-expectations — the checks that matter here are cross-table invariants
+#     of the game economy ("no coin is created", "a growth stage never
+#     regresses"). Those are statements about the product, and they read far
+#     better as tested Python than as an expectation suite. See quality/checks.py.
+#
+#   feast — a feature store earns its keep when several teams share features
+#     across online and offline paths. There is one consumer here, features come
+#     from one dbt model, and inference runs on the phone, where a store is
+#     unreachable. What it is actually valued for — one declaration per feature,
+#     with a point-in-time rule and a range — is in features/registry.py.
+#
+#   evidently — drift is measured with PSI in monitoring/drift.py: ~60 lines,
+#     tested, and its conventional bands (<0.1 / 0.1-0.2 / >0.2) are defensible
+#     in a review. An HTML report generator would not have added a decision.
+mlops = [
+  "mlflow>=2.14",
+]
+dev = [
+  "pytest>=8.2",
+  "pytest-cov>=5.0",
+  "pytest-asyncio>=0.23",
+  "httpx>=0.27",
+  "ruff>=0.5",
+  "mypy>=1.10",
+  "pre-commit>=3.7",
+  "types-requests",
+]
+
+[project.scripts]
+monetka = "monetka.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/monetka"]
+
+# ---------------------------------------------------------------- tooling ----
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E", "W",    # pycodestyle
+  "F",         # pyflakes
+  "I",         # isort
+  "N",         # pep8-naming
+  "UP",        # pyupgrade
+  "B",         # bugbear
+  "C4",        # comprehensions
+  "SIM",       # simplify
+  "PTH",       # use pathlib
+  "RUF",
+]
+ignore = [
+  "E501",              # line length is handled by the formatter
+  # The specification this project implements is in Russian, and quoting it
+  # verbatim in docstrings is the point — a paraphrase could not be checked
+  # against the source. These rules flag Cyrillic as "ambiguous unicode".
+  "RUF001",
+  "RUF002",
+  "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+# Import order in the ONNX exporter is load-bearing: skl2onnx must be imported
+# before onnxruntime or the converter kills the interpreter with an access
+# violation. Sorting the imports would "fix" the file into crashing, so the
+# isort rule is off here and the order is asserted by
+# tests/unit/test_drift_and_export.py::test_import_order_is_safe instead.
+"src/monetka/ml/export/onnx_export.py" = ["I001", "E402"]
+
+[tool.mypy]
+# 3.12 rather than the project's 3.11 floor: numpy's bundled stubs use `type`
+# statements, which mypy only parses under 3.12+. Runtime support for 3.11 is
+# verified by the test matrix in CI, which is the check that actually matters.
+python_version = "3.12"
+strict = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+files = ["src/monetka"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+  "integration: requires running docker-compose stack",
+  "slow: long-running test",
+]
+
+[tool.coverage.run]
+source = ["src/monetka"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = true
+skip_empty = true

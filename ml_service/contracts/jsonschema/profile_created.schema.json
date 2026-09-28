@@ -1,0 +1,62 @@
+{
+  "$defs": {
+    "PetAccessory": {
+      "enum": [
+        "none",
+        "scarf",
+        "cap"
+      ],
+      "title": "PetAccessory",
+      "type": "string"
+    },
+    "PetColour": {
+      "enum": [
+        "amber",
+        "mint",
+        "lilac"
+      ],
+      "title": "PetColour",
+      "type": "string"
+    },
+    "PetSpecies": {
+      "enum": [
+        "fox",
+        "cat",
+        "owl"
+      ],
+      "title": "PetSpecies",
+      "type": "string"
+    }
+  },
+  "$id": "ru.mos.monetka.events.v1.profile_created",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "No game name, no pet name — only the closed-vocabulary appearance codes.",
+  "properties": {
+    "onboarding_seconds": {
+      "maximum": 3600,
+      "minimum": 0,
+      "title": "Onboarding Seconds",
+      "type": "integer"
+    },
+    "pet_accessory": {
+      "$ref": "#/$defs/PetAccessory"
+    },
+    "pet_colour": {
+      "$ref": "#/$defs/PetColour"
+    },
+    "pet_species": {
+      "$ref": "#/$defs/PetSpecies"
+    }
+  },
+  "required": [
+    "pet_species",
+    "pet_colour",
+    "pet_accessory",
+    "onboarding_seconds"
+  ],
+  "title": "ProfileCreatedPayload",
+  "type": "object",
+  "x-monetka-event": "profile_created",
+  "x-monetka-schema-version": 1
+}

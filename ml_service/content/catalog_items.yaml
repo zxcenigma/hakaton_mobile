@@ -1,0 +1,183 @@
+# Каталог покупок «Монетки».
+#
+# ТЗ §2.5.6 — у каждой позиции есть цена, категория и заранее показанное
+# влияние на питомца. ТЗ §2.6 — минимум 8 позиций двух типов; здесь 14.
+# ТЗ §2.5.14 — новая позиция добавляется правкой этого файла, без изменения
+# логики приложения.
+#
+# Поля:
+#   id            — стабильный идентификатор, попадает в телеметрию
+#   category      — essential (обязательные) | optional (необязательные)
+#   price         — цена в игровых монетах
+#   period_need   — сколько раз за период это нужно питомцу (для essential)
+#   effects       — изменение состояния питомца, показывается ДО подтверждения
+#   child_label   — что видит ребёнок
+#   why           — короткое объяснение категории, доступно по нажатию
+#
+# Правило безопасности (ТЗ §2.2 «безопасная ошибка»): ни одна позиция не может
+# увести показатель питомца в зону, из которой нет восстановления. Минимальное
+# значение любого состояния ограничено 10, проверяется тестом
+# tests/unit/test_content.py::test_no_unrecoverable_effects.
+
+schema_version: 1
+currency: coins
+
+items:
+  # ----------------------------------------------------- обязательные ------
+  - id: food_porridge
+    category: essential
+    price: 12
+    period_need: 2
+    child_label: "Каша"
+    why: "Питомцу нужно есть каждый день — без этого он грустит."
+    effects:
+      - state: satiety
+        delta: 25
+      - state: mood
+        delta: 4
+
+  - id: food_soup
+    category: essential
+    price: 18
+    period_need: 1
+    child_label: "Суп"
+    why: "Сытный обед. Стоит дороже каши, но и насыщает сильнее."
+    effects:
+      - state: satiety
+        delta: 38
+      - state: mood
+        delta: 6
+
+  - id: water_clean
+    category: essential
+    price: 6
+    period_need: 2
+    child_label: "Чистая вода"
+    why: "Вода нужна всегда. Это самая дешёвая обязательная покупка."
+    effects:
+      - state: satiety
+        delta: 8
+      - state: energy
+        delta: 10
+
+  - id: hygiene_wash
+    category: essential
+    price: 10
+    period_need: 1
+    child_label: "Купание"
+    why: "Уход за питомцем — тоже обязательная забота."
+    effects:
+      - state: tidiness
+        delta: 30
+      - state: mood
+        delta: 5
+
+  - id: warm_blanket
+    category: essential
+    price: 22
+    period_need: 1
+    child_label: "Тёплый плед"
+    why: "Чтобы выспаться и восстановить силы к новому дню."
+    effects:
+      - state: energy
+        delta: 32
+      - state: mood
+        delta: 6
+
+  - id: vet_checkup
+    category: essential
+    price: 30
+    period_need: 0
+    child_label: "Осмотр у доктора"
+    why: "Иногда появляются непредвиденные расходы. Их тоже надо учитывать."
+    unexpected: true # ТЗ §2 — специально спланированный кейс непредвиденных расходов
+    effects:
+      - state: energy
+        delta: 20
+      - state: mood
+        delta: 10
+
+  # --------------------------------------------------- необязательные -----
+  - id: toy_ball
+    category: optional
+    price: 15
+    child_label: "Мячик"
+    why: "Приятно, но можно купить позже — сначала еда и уход."
+    effects:
+      - state: mood
+        delta: 18
+
+  - id: toy_puzzle
+    category: optional
+    price: 26
+    child_label: "Головоломка"
+    why: "Радует дольше мячика, но и стоит почти как суп с водой вместе."
+    effects:
+      - state: mood
+        delta: 26
+      - state: energy
+        delta: -4
+
+  - id: deco_scarf
+    category: optional
+    price: 34
+    child_label: "Шарфик"
+    why: "Украшение. На состояние питомца влияет меньше, чем еда."
+    effects:
+      - state: mood
+        delta: 20
+      - state: tidiness
+        delta: 6
+
+  - id: deco_lamp
+    category: optional
+    price: 40
+    child_label: "Ночник"
+    why: "Красиво и уютно. Дорогая покупка — подумай, что важнее сейчас."
+    effects:
+      - state: mood
+        delta: 22
+      - state: energy
+        delta: 8
+
+  - id: treat_cookie
+    category: optional
+    price: 9
+    child_label: "Печенье"
+    why: "Маленькая радость. Насыщает слабо — это не замена обеду."
+    effects:
+      - state: mood
+        delta: 12
+      - state: satiety
+        delta: 6
+
+  - id: sticker_pack
+    category: optional
+    price: 7
+    child_label: "Наклейки"
+    why: "Самое дешёвое желаемое. Хороший вариант, когда монет мало."
+    effects:
+      - state: mood
+        delta: 9
+
+  - id: walk_park
+    category: optional
+    price: 14
+    child_label: "Прогулка в парке"
+    why: "Поднимает настроение и бодрит, но занимает время до конца периода."
+    effects:
+      - state: mood
+        delta: 16
+      - state: energy
+        delta: 12
+      - state: satiety
+        delta: -6
+
+  - id: photo_album
+    category: optional
+    price: 45
+    child_label: "Фотоальбом"
+    why: "Самая дорогая необязательная покупка. Часто выгоднее отложить."
+    effects:
+      - state: mood
+        delta: 28

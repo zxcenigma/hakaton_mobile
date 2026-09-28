@@ -1,0 +1,27 @@
+{
+  "type": "record",
+  "name": "SavingsDepositedPayload",
+  "namespace": "ru.mos.monetka.events.v1",
+  "doc": "Payload of savings_deposited",
+  "fields": [
+    {
+      "name": "goal_id",
+      "type": "string"
+    },
+    {
+      "name": "amount",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "savings_after",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "balance_after",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+goal_id,cost,tier,child_label
+goal_ball_big,90,short,Большой мяч
+goal_book_set,150,short,Набор книжек
+goal_backpack,220,medium,Рюкзак
+goal_scooter,300,long,Самокат
+goal_tent,420,long,Палатка для похода

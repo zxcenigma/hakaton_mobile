@@ -1,0 +1,22 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      timeInterval: 15s
+
+  # Educational and product metrics live in the lakehouse, not in Prometheus:
+  # they are per-period aggregates over the gold layer, not time series scraped
+  # from a process.
+  - name: Trino (gold)
+    type: trino
+    access: proxy
+    url: http://trino:8080
+    jsonData:
+      catalog: iceberg
+      schema: gold
+      user: monetka

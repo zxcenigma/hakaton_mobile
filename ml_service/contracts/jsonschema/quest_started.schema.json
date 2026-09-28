@@ -1,0 +1,54 @@
+{
+  "$defs": {
+    "QuestTopic": {
+      "description": "ТЗ §2.5.8 — at least three topics are mandatory.",
+      "enum": [
+        "budgeting",
+        "saving",
+        "payments"
+      ],
+      "title": "QuestTopic",
+      "type": "string"
+    }
+  },
+  "$id": "ru.mos.monetka.events.v1.quest_started",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "difficulty": {
+      "maximum": 3,
+      "minimum": 1,
+      "title": "Difficulty",
+      "type": "integer"
+    },
+    "quest_id": {
+      "pattern": "^[a-z0-9_]{3,40}$",
+      "title": "Quest Id",
+      "type": "string"
+    },
+    "recommended_by_model": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Recommended By Model"
+    },
+    "topic": {
+      "$ref": "#/$defs/QuestTopic"
+    }
+  },
+  "required": [
+    "quest_id",
+    "topic",
+    "difficulty"
+  ],
+  "title": "QuestStartedPayload",
+  "type": "object",
+  "x-monetka-event": "quest_started",
+  "x-monetka-schema-version": 1
+}

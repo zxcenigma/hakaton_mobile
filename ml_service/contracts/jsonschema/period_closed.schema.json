@@ -1,0 +1,92 @@
+{
+  "$id": "ru.mos.monetka.events.v1.period_closed",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Fact of the period, compared against the plan (ТЗ §2.5.5, §2.5.10).",
+  "properties": {
+    "actual_essential": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Actual Essential",
+      "type": "integer"
+    },
+    "actual_optional": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Actual Optional",
+      "type": "integer"
+    },
+    "actual_savings": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Actual Savings",
+      "type": "integer"
+    },
+    "available_total": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Available Total",
+      "type": "integer"
+    },
+    "closed_period_no": {
+      "maximum": 10000,
+      "minimum": 0,
+      "title": "Closed Period No",
+      "type": "integer"
+    },
+    "essential_coverage": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Essential Coverage",
+      "type": "number"
+    },
+    "leftover": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Leftover",
+      "type": "integer"
+    },
+    "planned_essential": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Planned Essential",
+      "type": "integer"
+    },
+    "planned_optional": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Planned Optional",
+      "type": "integer"
+    },
+    "planned_savings": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Planned Savings",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "closed_period_no",
+    "available_total",
+    "planned_essential",
+    "planned_optional",
+    "planned_savings",
+    "actual_essential",
+    "actual_optional",
+    "actual_savings",
+    "essential_coverage",
+    "leftover"
+  ],
+  "title": "PeriodClosedPayload",
+  "type": "object",
+  "x-monetka-event": "period_closed",
+  "x-monetka-schema-version": 1
+}

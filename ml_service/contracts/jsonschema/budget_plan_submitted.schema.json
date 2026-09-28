@@ -1,0 +1,60 @@
+{
+  "$id": "ru.mos.monetka.events.v1.budget_plan_submitted",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "ТЗ §2.5.5 — the plan splits the available sum across ≥3 directions.",
+  "properties": {
+    "available_total": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Available Total",
+      "type": "integer"
+    },
+    "planned_essential": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Planned Essential",
+      "type": "integer"
+    },
+    "planned_optional": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Planned Optional",
+      "type": "integer"
+    },
+    "planned_savings": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Planned Savings",
+      "type": "integer"
+    },
+    "revisions_count": {
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Revisions Count",
+      "type": "integer"
+    },
+    "seconds_spent": {
+      "maximum": 7200,
+      "minimum": 0,
+      "title": "Seconds Spent",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "available_total",
+    "planned_essential",
+    "planned_optional",
+    "planned_savings",
+    "revisions_count",
+    "seconds_spent"
+  ],
+  "title": "BudgetPlanSubmittedPayload",
+  "type": "object",
+  "x-monetka-event": "budget_plan_submitted",
+  "x-monetka-schema-version": 1
+}

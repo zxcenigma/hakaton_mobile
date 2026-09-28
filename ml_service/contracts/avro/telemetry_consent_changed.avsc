@@ -1,0 +1,16 @@
+{
+  "type": "record",
+  "name": "TelemetryConsentChangedPayload",
+  "namespace": "ru.mos.monetka.events.v1",
+  "doc": "Adult-controlled opt-in switch (ТЗ §3.5). Default is *off*.",
+  "fields": [
+    {
+      "name": "granted",
+      "type": "boolean"
+    },
+    {
+      "name": "barrier",
+      "type": "string"
+    }
+  ]
+}

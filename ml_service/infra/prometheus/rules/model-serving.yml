@@ -1,0 +1,83 @@
+# Alert rules for the inference service.
+#
+# Deliberately few. An alert nobody acts on trains everyone to ignore the ones
+# that matter, so each rule below names a specific action in its annotation —
+# if there is no action, it is a dashboard panel, not an alert.
+#
+# Note what is NOT alerted on: the model abstaining, or the rule path being used
+# a lot. Both are designed behaviour. The advisor degrading to rules is a
+# supported state, not an incident — the mandatory game loop is unaffected
+# (ТЗ §3.1.5).
+
+groups:
+  - name: monetka-serving
+    interval: 30s
+    rules:
+      # ---------------------------------------------------------- latency ---
+      - alert: InferenceLatencyBudgetExceeded
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(monetka_inference_latency_seconds_bucket[10m]))
+          ) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          component: serving
+        annotations:
+          summary: "p95 инференса превысил 50 мс"
+          description: >-
+            p95 = {{ $value | humanizeDuration }}. Бюджет на устройстве — 50 мс;
+            ТЗ §3.4 отводит секунду на видимый отклик, и модель рядом с этой
+            границей делает советник неприятным.
+          action: >-
+            Проверить размер экспортированной модели и холодный старт сессии
+            ONNX. Если не чинится быстро — снять модель: приложение перейдёт
+            на правила без потери функциональности.
+
+      # ------------------------------------------------- model collapse ----
+      - alert: AdvisorHintCollapse
+        expr: |
+          count(count by (source) (monetka_inference_total)) == 1
+          and sum(increase(monetka_inference_total[1h])) > 100
+        for: 30m
+        labels:
+          severity: critical
+          component: serving
+        annotations:
+          summary: "Советник выдаёт подсказки только из одного источника"
+          description: >-
+            За час более 100 запросов, и все с одним источником. Обычно это
+            сломанный конвейер признаков: модель либо не вызывается вовсе,
+            либо отвечает одним классом на всё.
+          action: >-
+            Сверить порядок признаков в сайдкаре модели с реестром
+            (features/registry.py) и прогнать `monetka monitor`.
+
+      # ----------------------------------------------- service liveness ----
+      - alert: InferenceServiceDown
+        expr: up{job="monetka-api"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          component: serving
+        annotations:
+          summary: "API инференса недоступен"
+          description: >-
+            Сервис не отвечает более 5 минут. На игровой цикл это не влияет:
+            инференс выполняется на устройстве, а сервер нужен для аналитики
+            раздела взрослого и раздачи контента.
+          action: "Поднять сервис; срочности для пользователей нет."
+
+      - alert: NoAdvisorTraffic
+        expr: sum(increase(monetka_inference_total[1h])) == 0
+        for: 2h
+        labels:
+          severity: info
+          component: serving
+        annotations:
+          summary: "Советник не вызывался два часа"
+          description: >-
+            Ноль обращений. Либо никто не играет, либо приложение перестало
+            обращаться к советнику — второе куда интереснее.
+          action: "Сверить с активностью приложения, прежде чем что-то чинить."

@@ -1,0 +1,43 @@
+{
+  "$id": "ru.mos.monetka.events.v1.savings_deposited",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "amount": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Amount",
+      "type": "integer"
+    },
+    "balance_after": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Balance After",
+      "type": "integer"
+    },
+    "goal_id": {
+      "pattern": "^[a-z0-9_]{3,40}$",
+      "title": "Goal Id",
+      "type": "string"
+    },
+    "savings_after": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Savings After",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "goal_id",
+    "amount",
+    "savings_after",
+    "balance_after"
+  ],
+  "title": "SavingsDepositedPayload",
+  "type": "object",
+  "x-monetka-event": "savings_deposited",
+  "x-monetka-schema-version": 1
+}

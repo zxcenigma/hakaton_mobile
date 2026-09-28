@@ -1,0 +1,47 @@
+{
+  "$defs": {
+    "IncomeSource": {
+      "description": "ТЗ §2.5.4 — every credit states its source and amount.",
+      "enum": [
+        "daily_login",
+        "quest_reward",
+        "period_allowance",
+        "adult_bonus"
+      ],
+      "title": "IncomeSource",
+      "type": "string"
+    }
+  },
+  "$id": "ru.mos.monetka.events.v1.income_granted",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "ТЗ §2.5.4 — the balance never changes without a stated source.",
+  "properties": {
+    "amount": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Amount",
+      "type": "integer"
+    },
+    "balance_after": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Balance After",
+      "type": "integer"
+    },
+    "source": {
+      "$ref": "#/$defs/IncomeSource"
+    }
+  },
+  "required": [
+    "source",
+    "amount",
+    "balance_after"
+  ],
+  "title": "IncomeGrantedPayload",
+  "type": "object",
+  "x-monetka-event": "income_granted",
+  "x-monetka-schema-version": 1
+}

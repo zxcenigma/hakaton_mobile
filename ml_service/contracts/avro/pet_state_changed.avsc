@@ -1,0 +1,27 @@
+{
+  "type": "record",
+  "name": "PetStateChangedPayload",
+  "namespace": "ru.mos.monetka.events.v1",
+  "doc": "Payload of pet_state_changed",
+  "fields": [
+    {
+      "name": "state",
+      "type": {
+        "type": "map",
+        "values": "string"
+      }
+    },
+    {
+      "name": "value_before",
+      "type": "long"
+    },
+    {
+      "name": "value_after",
+      "type": "long"
+    },
+    {
+      "name": "reason_code",
+      "type": "string"
+    }
+  ]
+}

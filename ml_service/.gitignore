@@ -1,0 +1,70 @@
+# --- secrets -----------------------------------------------------------------
+# ТЗ §3.4 — «в репозитории отсутствуют пароли, токены, закрытые ключи подписи».
+.env
+.env.*
+!.env.template
+*.pem
+*.key
+*.keystore
+*.jks
+secrets/
+credentials.json
+service-account*.json
+
+# --- python ------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# --- data & artefacts --------------------------------------------------------
+# Generated, reproducible from `monetka generate` with a fixed seed. Keeping
+# them out of git is what makes the repo reviewable — and a 500 MB event dump
+# in history is not something you can remove later.
+# `data/*` rather than `data/`: git does not descend into an ignored
+# directory, so a trailing-slash rule cannot be undone for a file inside it and
+# the placeholder below would stay invisible.
+data/*
+artifacts/*
+# The directories themselves must exist in a fresh clone — they are bind-mount
+# sources, and Docker creates a missing one as root.
+!data/.gitkeep
+!artifacts/.gitkeep
+*.duckdb
+*.duckdb.wal
+*.parquet
+*.onnx
+*.tflite
+*.joblib
+
+# --- dbt ---------------------------------------------------------------------
+transform/dbt_monetka/target/
+transform/dbt_monetka/dbt_packages/
+transform/dbt_monetka/logs/
+logs/
+
+# --- airflow -----------------------------------------------------------------
+airflow.db
+airflow.cfg
+webserver_config.py
+standalone_admin_password.txt
+
+# --- editors / os ------------------------------------------------------------
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- notebooks ---------------------------------------------------------------
+.ipynb_checkpoints/

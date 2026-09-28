@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 900" width="1240" height="900"
+     role="img" aria-label="ML-пайплайн платформы Монетка">
+  <title>ML-пайплайн «Монетки»</title>
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#26221F"/>
+      <stop offset="100%" stop-color="#1B1917"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8C7A63"/>
+    </marker>
+    <marker id="arrowGold" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#E5C78F"/>
+    </marker>
+    <style>
+      .t    { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+      .hd   { font-size: 15px; font-weight: 700; fill: #E5C78F; }
+      .sub  { font-size: 11px; fill: #9C8A73; }
+      .num  { font-size: 12px; font-weight: 700; fill: #F0DDC3; }
+      .lbl  { font-size: 11px; fill: #C4AA8E; }
+      .note { font-size: 11px; fill: #9C8A73; }
+      .gate { font-size: 10px; font-weight: 700; fill: #211E1C; }
+    </style>
+  </defs>
+
+  <rect width="1240" height="900" fill="url(#bg)"/>
+
+  <text x="40" y="46" class="t" font-size="22" font-weight="700" fill="#E5C78F">
+    ML-пайплайн «Монетки»
+  </text>
+  <text x="40" y="70" class="t sub">
+    Цифры — фактический прогон: 900 профилей × 8 игровых периодов
+  </text>
+
+  <!-- ============================ APP ============================ -->
+  <rect x="40" y="100" width="250" height="96" rx="10" fill="#2F2A26" stroke="#463A28"/>
+  <text x="60" y="126" class="t hd">Приложение · Flutter</text>
+  <text x="60" y="146" class="t lbl">офлайн, инференс на устройстве</text>
+  <text x="60" y="164" class="t lbl">телеметрия выключена по умолчанию</text>
+  <text x="60" y="184" class="t note">включает взрослый (ТЗ §3.5)</text>
+
+  <path d="M 290 148 L 370 148" stroke="#8C7A63" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="300" y="140" class="t note">события</text>
+
+  <!-- ============================ INGEST ============================ -->
+  <rect x="370" y="100" width="210" height="96" rx="10" fill="#2F2A26" stroke="#463A28"/>
+  <text x="390" y="126" class="t hd">Redpanda</text>
+  <text x="390" y="146" class="t lbl">game.events.v1</text>
+  <text x="390" y="164" class="t lbl">at-least-once · DLQ</text>
+  <text x="390" y="184" class="t note">оффсет после записи</text>
+
+  <path d="M 580 148 L 660 148" stroke="#8C7A63" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="660" y="100" width="240" height="96" rx="10" fill="#2F2A26" stroke="#463A28"/>
+  <text x="680" y="126" class="t hd">BRONZE</text>
+  <text x="680" y="146" class="t num">179 972 события · 0 отклонено</text>
+  <text x="680" y="166" class="t lbl">append-only, дедуп по event_id</text>
+  <text x="680" y="184" class="t note">невалидное — в rejected_events</text>
+
+  <path d="M 780 196 L 780 236" stroke="#8C7A63" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ============================ SILVER ============================ -->
+  <rect x="470" y="236" width="430" height="92" rx="10" fill="#2F2A26" stroke="#463A28"/>
+  <text x="492" y="262" class="t hd">SILVER · 13 типизированных таблиц</text>
+  <text x="492" y="282" class="t num">fct_period 7 200 · fct_purchase 55 574 · fct_hint 7 200</text>
+  <text x="492" y="302" class="t lbl">починка порядка: occurred_at → ingested_at → event_id</text>
+  <text x="492" y="318" class="t note">распаковка payload по типу события</text>
+
+  <path d="M 685 328 L 685 368" stroke="#8C7A63" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ============================ GOLD ============================ -->
+  <rect x="330" y="368" width="710" height="104" rx="10" fill="#2F2A26" stroke="#463A28"/>
+  <text x="352" y="394" class="t hd">GOLD · dbt · 7 витрин · 59 тестов</text>
+  <text x="352" y="416" class="t num">period_summary 7 200 · behaviour_features 7 200 · goal_progress 1 529</text>
+  <text x="352" y="436" class="t num">model_performance 16 · quest_effectiveness 9 · economy_health 8 · competency 900</text>
+  <text x="352" y="458" class="t note">demo-трафик исключён одним макросом · point-in-time окна</text>
+
+  <!-- quality gate -->
+  <rect x="1060" y="392" width="150" height="56" rx="8" fill="#463A28" stroke="#E5C78F"/>
+  <text x="1075" y="414" class="t" font-size="12" font-weight="700" fill="#E5C78F">QUALITY</text>
+  <text x="1075" y="434" class="t lbl">14 проверок · блокирует</text>
+  <path d="M 1040 420 L 1060 420" stroke="#E5C78F" stroke-width="2" marker-end="url(#arrowGold)"/>
+
+  <!-- three branches -->
+  <path d="M 450 472 L 450 528" stroke="#8C7A63" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 700 472 L 700 528" stroke="#8C7A63" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 940 472 L 940 528" stroke="#8C7A63" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ============================ TRAIN ============================ -->
+  <rect x="290" y="528" width="320" height="168" rx="10" fill="#2F2A26" stroke="#463A28"/>
+  <text x="312" y="554" class="t hd">ОБУЧЕНИЕ</text>
+  <text x="312" y="576" class="t lbl">behaviour_segment · macro F1 0.861</text>
+  <text x="312" y="594" class="t lbl">quest_recommender · ρ 0.124</text>
+  <text x="312" y="612" class="t lbl">economy_anomaly · 25% периодов</text>
+
+  <rect x="312" y="626" width="276" height="26" rx="6" fill="#463A28"/>
+  <text x="324" y="644" class="t" font-size="11" fill="#E5C78F">ГЕЙТ: абсолютный порог + базовая линия</text>
+  <rect x="312" y="658" width="276" height="26" rx="6" fill="#463A28"/>
+  <text x="324" y="676" class="t" font-size="11" fill="#E5C78F">ПРОМОУШЕН: не хуже действующей</text>
+
+  <!-- ============================ DRIFT ============================ -->
+  <rect x="640" y="528" width="200" height="168" rx="10" fill="#2F2A26" stroke="#463A28"/>
+  <text x="662" y="554" class="t hd">ДРЕЙФ</text>
+  <text x="662" y="576" class="t lbl">PSI по 20 признакам</text>
+  <text x="662" y="594" class="t lbl">окно: первые 4 периода</text>
+  <text x="662" y="620" class="t note">Сообщает, но ничего</text>
+  <text x="662" y="636" class="t note">не запускает: дрейф здесь</text>
+  <text x="662" y="652" class="t note">ожидаем — продукт затем</text>
+  <text x="662" y="668" class="t note">и сделан, чтобы менять</text>
+  <text x="662" y="684" class="t note">поведение.</text>
+
+  <!-- ============================ MONITOR ============================ -->
+  <rect x="870" y="528" width="290" height="168" rx="10" fill="#2F2A26" stroke="#463A28"/>
+  <text x="892" y="554" class="t hd">МОНИТОРИНГ ПРОДА</text>
+  <text x="892" y="576" class="t lbl">из fct_hint — журнал предсказаний</text>
+  <text x="892" y="598" class="t num">здоровье: доля вызовов, задержка,</text>
+  <text x="892" y="614" class="t num">распределение классов</text>
+  <text x="892" y="638" class="t num">эффект: сравнение когорт</text>
+  <text x="892" y="654" class="t note">intention-to-treat, по профилю,</text>
+  <text x="892" y="670" class="t note">с доверительным интервалом</text>
+  <text x="892" y="686" class="t note">и расчётом нужной выборки</text>
+
+  <!-- ============================ EXPORT ============================ -->
+  <path d="M 450 696 L 450 744" stroke="#E5C78F" stroke-width="2" marker-end="url(#arrowGold)"/>
+  <rect x="290" y="744" width="320" height="96" rx="10" fill="#2F2A26" stroke="#E5C78F"/>
+  <text x="312" y="770" class="t hd">ЭКСПОРТ → ONNX</text>
+  <text x="312" y="790" class="t num">паритет: метки точно, решения 1.000</text>
+  <text x="312" y="810" class="t lbl">321 КБ + 294 КБ · сайдкар с порядком признаков</text>
+  <text x="312" y="830" class="t note">обучение на float32 — той же точности, что на телефоне</text>
+
+  <!-- loop back to app -->
+  <path d="M 290 792 L 165 792 L 165 196"
+        stroke="#E5C78F" stroke-width="2" fill="none" marker-end="url(#arrowGold)"/>
+  <text x="60" y="520" class="t" font-size="12" font-weight="700" fill="#E5C78F">ПЕТЛЯ</text>
+  <text x="60" y="538" class="t note">модель едет</text>
+  <text x="60" y="554" class="t note">обратно в APK</text>
+
+  <!-- loop from monitor back up -->
+  <path d="M 1160 612 L 1200 612 L 1200 148 L 900 148"
+        stroke="#E5C78F" stroke-width="1.6" fill="none" stroke-dasharray="5 4"
+        marker-end="url(#arrowGold)"/>
+  <text x="1120" y="470" class="t note">hint_shown</text>
+  <text x="1120" y="486" class="t note">замыкает</text>
+  <text x="1120" y="502" class="t note">измерение</text>
+
+  <!-- footer -->
+  <text x="40" y="874" class="t note">
+    Ни одна модель не меняет баланс, покупки, настроение котика и срок до цели — только текст подсказки и порядок заданий (ADR 0001).
+  </text>
+</svg>

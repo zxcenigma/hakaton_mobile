@@ -1,0 +1,10 @@
+quest_id,topic,difficulty,choice_count,title
+budget_first_plan,budgeting,1,3,Первый план
+budget_leftover,budgeting,2,3,Остались лишние монеты
+budget_unexpected,budgeting,3,3,Непредвиденный расход
+saving_first_goal,saving,1,3,Выбираем цель
+saving_regular,saving,2,3,Понемногу или разом
+saving_withdraw,saving,3,3,Взять из копилки
+payments_compare_price,payments,1,3,Что дешевле
+payments_not_enough,payments,2,3,Не хватает монет
+payments_need_vs_want,payments,3,3,Нужное и желаемое

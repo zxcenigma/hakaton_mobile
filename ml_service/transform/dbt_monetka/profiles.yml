@@ -1,0 +1,37 @@
+# dbt profiles kept inside the repo on purpose: the whole project must start with
+# one documented command (ТЗ §3.2), and a profile hidden in ~/.dbt/ defeats that.
+#
+# No secrets live here. The DuckDB target is a local file path; the Trino target
+# reads its credentials from the environment, and `.env` is git-ignored.
+
+monetka:
+  target: local
+  outputs:
+    # --------------------------------------------------------------- local --
+    # Zero infrastructure: same DuckDB file the ingestion layer writes.
+    local:
+      type: duckdb
+      path: "{{ env_var('MONETKA_WAREHOUSE_PATH', '../../data/warehouse/monetka.duckdb') }}"
+      threads: 4
+      extensions:
+        - httpfs
+        - json
+
+    # ------------------------------------------------------------------ ci --
+    ci:
+      type: duckdb
+      path: "{{ env_var('MONETKA_WAREHOUSE_PATH', '../../data/warehouse/monetka.duckdb') }}"
+      threads: 2
+
+    # ------------------------------------------------------------- compose --
+    # Iceberg tables on SeaweedFS, queried through Trino.
+    compose:
+      type: trino
+      method: none
+      user: "{{ env_var('MONETKA_TRINO_USER', 'monetka') }}"
+      host: "{{ env_var('MONETKA_TRINO_HOST', 'trino') }}"
+      port: "{{ env_var('MONETKA_TRINO_PORT', '8080') | int }}"
+      catalog: iceberg
+      schema: gold
+      threads: 4
+      http_scheme: http

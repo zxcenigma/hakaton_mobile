@@ -1,0 +1,28 @@
+{
+  "$id": "ru.mos.monetka.events.v1.telemetry_consent_changed",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Adult-controlled opt-in switch (ТЗ §3.5). Default is *off*.",
+  "properties": {
+    "barrier": {
+      "enum": [
+        "long_press",
+        "arithmetic"
+      ],
+      "title": "Barrier",
+      "type": "string"
+    },
+    "granted": {
+      "title": "Granted",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "granted",
+    "barrier"
+  ],
+  "title": "TelemetryConsentChangedPayload",
+  "type": "object",
+  "x-monetka-event": "telemetry_consent_changed",
+  "x-monetka-schema-version": 1
+}

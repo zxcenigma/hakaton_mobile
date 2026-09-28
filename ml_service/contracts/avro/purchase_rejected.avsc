@@ -1,0 +1,36 @@
+{
+  "type": "record",
+  "name": "PurchaseRejectedPayload",
+  "namespace": "ru.mos.monetka.events.v1",
+  "doc": "ТЗ §2.5.6 — a negative balance is impossible; the app explains instead.",
+  "fields": [
+    {
+      "name": "item_id",
+      "type": "string"
+    },
+    {
+      "name": "item_category",
+      "type": {
+        "type": "map",
+        "values": "string"
+      }
+    },
+    {
+      "name": "price",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "balance",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "reason",
+      "type": {
+        "type": "map",
+        "values": "string"
+      }
+    }
+  ]
+}

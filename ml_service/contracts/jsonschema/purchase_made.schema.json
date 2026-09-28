@@ -1,0 +1,98 @@
+{
+  "$defs": {
+    "ExpenseCategory": {
+      "description": "ТЗ §2.5.5 — the two mandatory expense directions, plus savings.",
+      "enum": [
+        "essential",
+        "optional",
+        "savings"
+      ],
+      "title": "ExpenseCategory",
+      "type": "string"
+    },
+    "PetEffect": {
+      "additionalProperties": false,
+      "description": "Declared effect of a purchase on the pet, shown *before* confirming.",
+      "properties": {
+        "delta": {
+          "maximum": 50,
+          "minimum": -50,
+          "title": "Delta",
+          "type": "integer"
+        },
+        "state": {
+          "$ref": "#/$defs/PetStateKind"
+        }
+      },
+      "required": [
+        "state",
+        "delta"
+      ],
+      "title": "PetEffect",
+      "type": "object"
+    },
+    "PetStateKind": {
+      "enum": [
+        "mood",
+        "satiety",
+        "energy",
+        "tidiness"
+      ],
+      "title": "PetStateKind",
+      "type": "string"
+    }
+  },
+  "$id": "ru.mos.monetka.events.v1.purchase_made",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "balance_after": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Balance After",
+      "type": "integer"
+    },
+    "balance_before": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Balance Before",
+      "type": "integer"
+    },
+    "effects": {
+      "items": {
+        "$ref": "#/$defs/PetEffect"
+      },
+      "maxItems": 4,
+      "title": "Effects",
+      "type": "array"
+    },
+    "item_category": {
+      "$ref": "#/$defs/ExpenseCategory"
+    },
+    "item_id": {
+      "pattern": "^[a-z0-9_]{3,40}$",
+      "title": "Item Id",
+      "type": "string"
+    },
+    "price": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Price",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "item_id",
+    "item_category",
+    "price",
+    "balance_before",
+    "balance_after"
+  ],
+  "title": "PurchaseMadePayload",
+  "type": "object",
+  "x-monetka-event": "purchase_made",
+  "x-monetka-schema-version": 1
+}

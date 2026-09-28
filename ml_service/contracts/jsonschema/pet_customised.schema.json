@@ -1,0 +1,54 @@
+{
+  "$defs": {
+    "PetAccessory": {
+      "enum": [
+        "none",
+        "scarf",
+        "cap"
+      ],
+      "title": "PetAccessory",
+      "type": "string"
+    },
+    "PetColour": {
+      "enum": [
+        "amber",
+        "mint",
+        "lilac"
+      ],
+      "title": "PetColour",
+      "type": "string"
+    },
+    "PetSpecies": {
+      "enum": [
+        "fox",
+        "cat",
+        "owl"
+      ],
+      "title": "PetSpecies",
+      "type": "string"
+    }
+  },
+  "$id": "ru.mos.monetka.events.v1.pet_customised",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "pet_accessory": {
+      "$ref": "#/$defs/PetAccessory"
+    },
+    "pet_colour": {
+      "$ref": "#/$defs/PetColour"
+    },
+    "pet_species": {
+      "$ref": "#/$defs/PetSpecies"
+    }
+  },
+  "required": [
+    "pet_species",
+    "pet_colour",
+    "pet_accessory"
+  ],
+  "title": "PetCustomisedPayload",
+  "type": "object",
+  "x-monetka-event": "pet_customised",
+  "x-monetka-schema-version": 1
+}

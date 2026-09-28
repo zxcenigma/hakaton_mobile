@@ -1,0 +1,31 @@
+{
+  "type": "record",
+  "name": "QuestStartedPayload",
+  "namespace": "ru.mos.monetka.events.v1",
+  "doc": "Payload of quest_started",
+  "fields": [
+    {
+      "name": "quest_id",
+      "type": "string"
+    },
+    {
+      "name": "topic",
+      "type": {
+        "type": "map",
+        "values": "string"
+      }
+    },
+    {
+      "name": "difficulty",
+      "type": "long"
+    },
+    {
+      "name": "recommended_by_model",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    }
+  ]
+}

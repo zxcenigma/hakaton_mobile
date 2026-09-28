@@ -1,0 +1,74 @@
+# Install with: make hooks
+#
+# The hooks are ordered cheapest-first, so an obvious mistake is caught before
+# the slower checks run.
+
+default_language_version:
+  python: python3.12
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      # ТЗ §3.4 — no signing keys, tokens or passwords in the repository.
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: [--maxkb=512]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        files: ^src/
+        additional_dependencies:
+          - pydantic>=2.7
+          - pydantic-settings>=2.3
+          - types-requests
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.19.2
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/sqlfluff/sqlfluff
+    rev: 3.2.0
+    hooks:
+      - id: sqlfluff-lint
+        files: ^transform/.*\.sql$
+        additional_dependencies: [dbt-core~=1.8, dbt-duckdb~=1.8, sqlfluff-templater-dbt]
+
+  - repo: local
+    hooks:
+      # The content pack is edited by a methodologist, not a programmer. These
+      # run on every commit so a quest that breaks the ТЗ §2.6 minimums or the
+      # age-appropriateness rules cannot reach a review.
+      - id: content-contract
+        name: educational content contract
+        entry: pytest tests/unit/test_content.py -q
+        language: system
+        files: ^content/.*\.yaml$
+        pass_filenames: false
+
+      - id: event-contract
+        name: event contract and privacy guard
+        entry: pytest tests/unit/test_events.py -q
+        language: system
+        files: ^src/monetka/common/events\.py$
+        pass_filenames: false

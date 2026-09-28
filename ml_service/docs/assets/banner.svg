@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="1200" height="320" role="img" aria-label="Монетка — Data &amp; ML Platform">
+  <title>Монетка — Data &amp; ML Platform</title>
+
+  <defs>
+    <!-- Palette taken verbatim from the app's AppPalette so the repository and
+         the product read as one thing. -->
+    <linearGradient id="stage" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#2A2523"/>
+      <stop offset="55%"  stop-color="#211E1C"/>
+      <stop offset="100%" stop-color="#1A1715"/>
+    </linearGradient>
+
+    <radialGradient id="spot" cx="50%" cy="115%" r="70%">
+      <stop offset="0%"   stop-color="#51463D" stop-opacity="0.85"/>
+      <stop offset="60%"  stop-color="#51463D" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#51463D" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="goldText" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#C4AA8E"/>
+      <stop offset="42%"  stop-color="#E5C78F"/>
+      <stop offset="70%"  stop-color="#F0DDC3"/>
+      <stop offset="100%" stop-color="#D9B87C"/>
+    </linearGradient>
+
+    <linearGradient id="coinFace" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0%"   stop-color="#F0DDC3"/>
+      <stop offset="55%"  stop-color="#E5C78F"/>
+      <stop offset="100%" stop-color="#B7975F"/>
+    </linearGradient>
+
+    <linearGradient id="podium" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#716052"/>
+      <stop offset="100%" stop-color="#302923"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="320" fill="url(#stage)"/>
+  <ellipse cx="600" cy="320" rx="560" ry="200" fill="url(#spot)"/>
+
+  <!-- Podium: the app puts the cat on one, so the banner does too. -->
+  <ellipse cx="600" cy="322" rx="330" ry="24" fill="url(#podium)" opacity="0.9"/>
+  <ellipse cx="600" cy="316" rx="330" ry="24" fill="#716052" opacity="0.45"/>
+
+  <!-- Coins, arranged as a rising savings stack. -->
+  <g opacity="0.95">
+    <g transform="translate(168 196)">
+      <ellipse cx="0" cy="26" rx="46" ry="13" fill="#000" opacity="0.32"/>
+      <circle r="40" fill="url(#coinFace)"/>
+      <circle r="40" fill="none" stroke="#8C7143" stroke-width="2"/>
+      <circle r="29" fill="none" stroke="#8C7143" stroke-width="1.5" opacity="0.65"/>
+      <text x="0" y="12" font-family="Georgia, 'Times New Roman', serif" font-size="34"
+            font-weight="700" fill="#5E4A22" text-anchor="middle">₽</text>
+    </g>
+    <g transform="translate(1032 196)">
+      <ellipse cx="0" cy="26" rx="46" ry="13" fill="#000" opacity="0.32"/>
+      <circle r="40" fill="url(#coinFace)"/>
+      <circle r="40" fill="none" stroke="#8C7143" stroke-width="2"/>
+      <circle r="29" fill="none" stroke="#8C7143" stroke-width="1.5" opacity="0.65"/>
+      <text x="0" y="12" font-family="Georgia, 'Times New Roman', serif" font-size="34"
+            font-weight="700" fill="#5E4A22" text-anchor="middle">₽</text>
+    </g>
+  </g>
+
+  <!-- Small coins scattered as a subtle "falling coins" echo of the app. -->
+  <g fill="#E5C78F" opacity="0.28">
+    <circle cx="272" cy="86"  r="7"/>
+    <circle cx="332" cy="140" r="5"/>
+    <circle cx="228" cy="150" r="4"/>
+    <circle cx="928" cy="92"  r="7"/>
+    <circle cx="872" cy="146" r="5"/>
+    <circle cx="972" cy="152" r="4"/>
+  </g>
+
+  <text x="600" y="132" text-anchor="middle"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="76" font-weight="700" letter-spacing="14"
+        fill="url(#goldText)">МОНЕТКА</text>
+
+  <text x="600" y="176" text-anchor="middle"
+        font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="20" letter-spacing="5" fill="#C4AA8E">DATA &amp; ML PLATFORM</text>
+
+  <line x1="452" y1="204" x2="748" y2="204" stroke="#463A28" stroke-width="2"/>
+  <circle cx="600" cy="204" r="4" fill="#E5C78F"/>
+
+  <text x="600" y="240" text-anchor="middle"
+        font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="17" fill="#F0DDC3" opacity="0.82">
+    Финансовая грамотность для детей 7–11 лет
+  </text>
+  <text x="600" y="266" text-anchor="middle"
+        font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="14" fill="#C4AA8E" opacity="0.7">
+    Департамент финансов города Москвы
+  </text>
+</svg>

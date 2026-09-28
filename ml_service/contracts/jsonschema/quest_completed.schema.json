@@ -1,0 +1,89 @@
+{
+  "$defs": {
+    "QuestOutcome": {
+      "enum": [
+        "optimal",
+        "suboptimal",
+        "poor"
+      ],
+      "title": "QuestOutcome",
+      "type": "string"
+    },
+    "QuestTopic": {
+      "description": "ТЗ §2.5.8 — at least three topics are mandatory.",
+      "enum": [
+        "budgeting",
+        "saving",
+        "payments"
+      ],
+      "title": "QuestTopic",
+      "type": "string"
+    }
+  },
+  "$id": "ru.mos.monetka.events.v1.quest_completed",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "attempts": {
+      "maximum": 20,
+      "minimum": 1,
+      "title": "Attempts",
+      "type": "integer"
+    },
+    "choice_id": {
+      "pattern": "^[a-z0-9_]{1,40}$",
+      "title": "Choice Id",
+      "type": "string"
+    },
+    "difficulty": {
+      "maximum": 3,
+      "minimum": 1,
+      "title": "Difficulty",
+      "type": "integer"
+    },
+    "explanation_shown": {
+      "const": true,
+      "default": true,
+      "title": "Explanation Shown",
+      "type": "boolean"
+    },
+    "outcome": {
+      "$ref": "#/$defs/QuestOutcome"
+    },
+    "quest_id": {
+      "pattern": "^[a-z0-9_]{3,40}$",
+      "title": "Quest Id",
+      "type": "string"
+    },
+    "reward": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Reward",
+      "type": "integer"
+    },
+    "seconds_spent": {
+      "maximum": 7200,
+      "minimum": 0,
+      "title": "Seconds Spent",
+      "type": "integer"
+    },
+    "topic": {
+      "$ref": "#/$defs/QuestTopic"
+    }
+  },
+  "required": [
+    "quest_id",
+    "topic",
+    "difficulty",
+    "outcome",
+    "choice_id",
+    "attempts",
+    "seconds_spent",
+    "reward"
+  ],
+  "title": "QuestCompletedPayload",
+  "type": "object",
+  "x-monetka-event": "quest_completed",
+  "x-monetka-schema-version": 1
+}

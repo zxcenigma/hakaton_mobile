@@ -1,0 +1,65 @@
+{
+  "$defs": {
+    "ExpenseCategory": {
+      "description": "ТЗ §2.5.5 — the two mandatory expense directions, plus savings.",
+      "enum": [
+        "essential",
+        "optional",
+        "savings"
+      ],
+      "title": "ExpenseCategory",
+      "type": "string"
+    },
+    "RejectionReason": {
+      "enum": [
+        "insufficient_balance",
+        "would_break_essentials",
+        "over_plan_limit"
+      ],
+      "title": "RejectionReason",
+      "type": "string"
+    }
+  },
+  "$id": "ru.mos.monetka.events.v1.purchase_rejected",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "ТЗ §2.5.6 — a negative balance is impossible; the app explains instead.",
+  "properties": {
+    "balance": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Balance",
+      "type": "integer"
+    },
+    "item_category": {
+      "$ref": "#/$defs/ExpenseCategory"
+    },
+    "item_id": {
+      "pattern": "^[a-z0-9_]{3,40}$",
+      "title": "Item Id",
+      "type": "string"
+    },
+    "price": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Price",
+      "type": "integer"
+    },
+    "reason": {
+      "$ref": "#/$defs/RejectionReason"
+    }
+  },
+  "required": [
+    "item_id",
+    "item_category",
+    "price",
+    "balance",
+    "reason"
+  ],
+  "title": "PurchaseRejectedPayload",
+  "type": "object",
+  "x-monetka-event": "purchase_rejected",
+  "x-monetka-schema-version": 1
+}

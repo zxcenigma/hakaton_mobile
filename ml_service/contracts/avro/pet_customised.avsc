@@ -1,0 +1,29 @@
+{
+  "type": "record",
+  "name": "PetCustomisedPayload",
+  "namespace": "ru.mos.monetka.events.v1",
+  "doc": "Payload of pet_customised",
+  "fields": [
+    {
+      "name": "pet_species",
+      "type": {
+        "type": "map",
+        "values": "string"
+      }
+    },
+    {
+      "name": "pet_colour",
+      "type": {
+        "type": "map",
+        "values": "string"
+      }
+    },
+    {
+      "name": "pet_accessory",
+      "type": {
+        "type": "map",
+        "values": "string"
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "type": "record",
+  "name": "GoalSelectedPayload",
+  "namespace": "ru.mos.monetka.events.v1",
+  "doc": "Payload of goal_selected",
+  "fields": [
+    {
+      "name": "goal_id",
+      "type": "string"
+    },
+    {
+      "name": "goal_cost",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "savings_at_selection",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    }
+  ]
+}

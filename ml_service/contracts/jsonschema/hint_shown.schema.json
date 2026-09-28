@@ -1,0 +1,85 @@
+{
+  "$id": "ru.mos.monetka.events.v1.hint_shown",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A hint surfaced to the child, possibly chosen by a model.\n\nThe model may only *choose which explanation to show*. It can never change\nthe balance, block a purchase or alter the pet — that logic is deterministic\nand lives on device. See ``docs/ml-cards/`` for the guardrails.",
+  "properties": {
+    "advisor_arm": {
+      "default": "rule",
+      "enum": [
+        "rule",
+        "model"
+      ],
+      "title": "Advisor Arm",
+      "type": "string"
+    },
+    "hint_id": {
+      "pattern": "^[a-z0-9_]{3,40}$",
+      "title": "Hint Id",
+      "type": "string"
+    },
+    "inference_latency_ms": {
+      "anyOf": [
+        {
+          "maximum": 10000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Inference Latency Ms"
+    },
+    "model_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model Name"
+    },
+    "model_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model Version"
+    },
+    "predicted_segment": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Predicted Segment"
+    },
+    "trigger": {
+      "pattern": "^[a-z0-9_]{3,40}$",
+      "title": "Trigger",
+      "type": "string"
+    }
+  },
+  "required": [
+    "hint_id",
+    "trigger"
+  ],
+  "title": "HintShownPayload",
+  "type": "object",
+  "x-monetka-event": "hint_shown",
+  "x-monetka-schema-version": 1
+}

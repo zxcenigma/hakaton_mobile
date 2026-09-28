@@ -1,0 +1,34 @@
+{
+  "$id": "ru.mos.monetka.events.v1.goal_reached",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "goal_cost": {
+      "description": "In-game currency, integer units",
+      "maximum": 1000000,
+      "minimum": 0,
+      "title": "Goal Cost",
+      "type": "integer"
+    },
+    "goal_id": {
+      "pattern": "^[a-z0-9_]{3,40}$",
+      "title": "Goal Id",
+      "type": "string"
+    },
+    "periods_taken": {
+      "maximum": 999,
+      "minimum": 1,
+      "title": "Periods Taken",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "goal_id",
+    "goal_cost",
+    "periods_taken"
+  ],
+  "title": "GoalReachedPayload",
+  "type": "object",
+  "x-monetka-event": "goal_reached",
+  "x-monetka-schema-version": 1
+}

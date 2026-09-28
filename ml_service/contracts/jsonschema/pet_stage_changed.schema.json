@@ -1,0 +1,47 @@
+{
+  "$defs": {
+    "PetStage": {
+      "description": "ТЗ §2.6 — at least three growth stages.",
+      "enum": [
+        "hatchling",
+        "cub",
+        "companion",
+        "guide"
+      ],
+      "title": "PetStage",
+      "type": "string"
+    }
+  },
+  "$id": "ru.mos.monetka.events.v1.pet_stage_changed",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "periods_considered": {
+      "maximum": 100,
+      "minimum": 1,
+      "title": "Periods Considered",
+      "type": "integer"
+    },
+    "reason_code": {
+      "pattern": "^[a-z0-9_]{3,60}$",
+      "title": "Reason Code",
+      "type": "string"
+    },
+    "stage_after": {
+      "$ref": "#/$defs/PetStage"
+    },
+    "stage_before": {
+      "$ref": "#/$defs/PetStage"
+    }
+  },
+  "required": [
+    "stage_before",
+    "stage_after",
+    "reason_code",
+    "periods_considered"
+  ],
+  "title": "PetStageChangedPayload",
+  "type": "object",
+  "x-monetka-event": "pet_stage_changed",
+  "x-monetka-schema-version": 1
+}

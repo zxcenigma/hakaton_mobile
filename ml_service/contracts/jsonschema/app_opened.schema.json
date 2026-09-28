@@ -1,0 +1,25 @@
+{
+  "$id": "ru.mos.monetka.events.v1.app_opened",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "cold_start": {
+      "title": "Cold Start",
+      "type": "boolean"
+    },
+    "startup_latency_ms": {
+      "maximum": 120000,
+      "minimum": 0,
+      "title": "Startup Latency Ms",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "cold_start",
+    "startup_latency_ms"
+  ],
+  "title": "AppOpenedPayload",
+  "type": "object",
+  "x-monetka-event": "app_opened",
+  "x-monetka-schema-version": 1
+}

@@ -1,0 +1,21 @@
+# Everything in this repository is read by Linux: Docker builds, entrypoint
+# scripts, dbt, CI. A CRLF file breaks some of them outright — a shell script
+# with CRLF fails inside a container with `bad interpreter: no such file`, which
+# names the interpreter and not the real cause.
+#
+# It happens without anyone deciding to do it: on Windows, Python's `open(...,
+# "w")` translates "\n" to "\r\n", so an ordinary edit script rewrites an entire
+# file's line endings. The diff then shows every line as changed and the real
+# change is invisible. That is exactly how it happened here.
+* text=auto eol=lf
+
+# Binaries must never be touched.
+*.png   binary
+*.jpg   binary
+*.pdf   binary
+*.pptx  binary
+*.onnx  binary
+*.joblib binary
+*.parquet binary
+*.duckdb binary
+*.avro  binary

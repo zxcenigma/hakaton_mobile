@@ -1,0 +1,55 @@
+{
+  "type": "record",
+  "name": "QuestCompletedPayload",
+  "namespace": "ru.mos.monetka.events.v1",
+  "doc": "Payload of quest_completed",
+  "fields": [
+    {
+      "name": "quest_id",
+      "type": "string"
+    },
+    {
+      "name": "topic",
+      "type": {
+        "type": "map",
+        "values": "string"
+      }
+    },
+    {
+      "name": "difficulty",
+      "type": "long"
+    },
+    {
+      "name": "outcome",
+      "type": {
+        "type": "map",
+        "values": "string"
+      }
+    },
+    {
+      "name": "choice_id",
+      "type": "string"
+    },
+    {
+      "name": "attempts",
+      "type": "long"
+    },
+    {
+      "name": "seconds_spent",
+      "type": "long"
+    },
+    {
+      "name": "reward",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "explanation_shown",
+      "type": [
+        "null",
+        "boolean"
+      ],
+      "default": null
+    }
+  ]
+}

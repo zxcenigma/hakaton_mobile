@@ -1,0 +1,15 @@
+item_id,category,price,period_need,is_unexpected,child_label
+food_porridge,essential,12,2,False,Каша
+food_soup,essential,18,1,False,Суп
+water_clean,essential,6,2,False,Чистая вода
+hygiene_wash,essential,10,1,False,Купание
+warm_blanket,essential,22,1,False,Тёплый плед
+vet_checkup,essential,30,0,True,Осмотр у доктора
+toy_ball,optional,15,0,False,Мячик
+toy_puzzle,optional,26,0,False,Головоломка
+deco_scarf,optional,34,0,False,Шарфик
+deco_lamp,optional,40,0,False,Ночник
+treat_cookie,optional,9,0,False,Печенье
+sticker_pack,optional,7,0,False,Наклейки
+walk_park,optional,14,0,False,Прогулка в парке
+photo_album,optional,45,0,False,Фотоальбом

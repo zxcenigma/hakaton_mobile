@@ -1,0 +1,25 @@
+{
+  "type": "record",
+  "name": "IncomeGrantedPayload",
+  "namespace": "ru.mos.monetka.events.v1",
+  "doc": "ТЗ §2.5.4 — the balance never changes without a stated source.",
+  "fields": [
+    {
+      "name": "source",
+      "type": {
+        "type": "map",
+        "values": "string"
+      }
+    },
+    {
+      "name": "amount",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "balance_after",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    }
+  ]
+}

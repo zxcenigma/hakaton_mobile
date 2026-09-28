@@ -1,0 +1,21 @@
+{
+  "type": "record",
+  "name": "GoalReachedPayload",
+  "namespace": "ru.mos.monetka.events.v1",
+  "doc": "Payload of goal_reached",
+  "fields": [
+    {
+      "name": "goal_id",
+      "type": "string"
+    },
+    {
+      "name": "goal_cost",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "periods_taken",
+      "type": "long"
+    }
+  ]
+}

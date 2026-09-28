@@ -1,0 +1,36 @@
+{
+  "type": "record",
+  "name": "BudgetPlanSubmittedPayload",
+  "namespace": "ru.mos.monetka.events.v1",
+  "doc": "ТЗ §2.5.5 — the plan splits the available sum across ≥3 directions.",
+  "fields": [
+    {
+      "name": "available_total",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "planned_essential",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "planned_optional",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "planned_savings",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "revisions_count",
+      "type": "long"
+    },
+    {
+      "name": "seconds_spent",
+      "type": "long"
+    }
+  ]
+}

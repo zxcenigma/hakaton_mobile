@@ -1,0 +1,16 @@
+{
+  "type": "record",
+  "name": "AppOpenedPayload",
+  "namespace": "ru.mos.monetka.events.v1",
+  "doc": "Payload of app_opened",
+  "fields": [
+    {
+      "name": "cold_start",
+      "type": "boolean"
+    },
+    {
+      "name": "startup_latency_ms",
+      "type": "long"
+    }
+  ]
+}

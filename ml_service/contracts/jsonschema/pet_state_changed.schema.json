@@ -1,0 +1,49 @@
+{
+  "$defs": {
+    "PetStateKind": {
+      "enum": [
+        "mood",
+        "satiety",
+        "energy",
+        "tidiness"
+      ],
+      "title": "PetStateKind",
+      "type": "string"
+    }
+  },
+  "$id": "ru.mos.monetka.events.v1.pet_state_changed",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "reason_code": {
+      "pattern": "^[a-z0-9_]{3,60}$",
+      "title": "Reason Code",
+      "type": "string"
+    },
+    "state": {
+      "$ref": "#/$defs/PetStateKind"
+    },
+    "value_after": {
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Value After",
+      "type": "integer"
+    },
+    "value_before": {
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Value Before",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "state",
+    "value_before",
+    "value_after",
+    "reason_code"
+  ],
+  "title": "PetStateChangedPayload",
+  "type": "object",
+  "x-monetka-event": "pet_state_changed",
+  "x-monetka-schema-version": 1
+}

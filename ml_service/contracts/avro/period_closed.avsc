@@ -1,0 +1,56 @@
+{
+  "type": "record",
+  "name": "PeriodClosedPayload",
+  "namespace": "ru.mos.monetka.events.v1",
+  "doc": "Fact of the period, compared against the plan (ТЗ §2.5.5, §2.5.10).",
+  "fields": [
+    {
+      "name": "closed_period_no",
+      "type": "long"
+    },
+    {
+      "name": "available_total",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "planned_essential",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "planned_optional",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "planned_savings",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "actual_essential",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "actual_optional",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "actual_savings",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    },
+    {
+      "name": "essential_coverage",
+      "type": "double"
+    },
+    {
+      "name": "leftover",
+      "type": "long",
+      "doc": "In-game currency, integer units"
+    }
+  ]
+}

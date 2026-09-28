@@ -1,0 +1,78 @@
+# Правила состояния и развития питомца.
+#
+# ТЗ §2.5.10 — не менее трёх состояний/стадий; развитие зависит от совокупности
+# решений за несколько периодов: покрытия обязательных расходов, соответствия
+# факта плану и регулярности накоплений.
+#
+# ТЗ §2 — запрещены явные негативные последствия (смерть, болезнь, травма) как
+# реакция на ошибку пользователя. Поэтому:
+#   * ни одно состояние не опускается ниже floor_value;
+#   * стадия развития НИКОГДА не понижается (no_regression: true) — прогресс не
+#     обнуляется, темп роста лишь замедляется;
+#   * «непредвиденные расходы» — единственный спланированный кейс, и он не
+#     является следствием ошибки ребёнка.
+#
+# Все формулы ниже детерминированы и вычисляются на устройстве. Модели машинного
+# обучения на них не влияют — ML выбирает только текст подсказки.
+
+schema_version: 1
+
+states:
+  floor_value: 10 # ниже не опускается никогда — «безопасная ошибка» (ТЗ §2.2)
+  ceiling_value: 100
+  initial_value: 60
+  # Естественное убывание за период, если ничего не покупать.
+  decay_per_period:
+    satiety: 30
+    energy: 20
+    tidiness: 15
+    mood: 10
+
+stages:
+  no_regression: true # стадия не понижается ни при каких решениях
+  evaluation_window_periods: 3 # решение принимается по совокупности 3 периодов
+  order: [hatchling, cub, companion, guide]
+  levels:
+    - id: hatchling
+      child_label: "Малыш"
+      requires: {}
+    - id: cub
+      child_label: "Подрастает"
+      requires:
+        periods_completed: 2
+        avg_essential_coverage: 0.70
+    - id: companion
+      child_label: "Друг"
+      requires:
+        periods_completed: 4
+        avg_essential_coverage: 0.85
+        avg_plan_adherence: 0.60
+        periods_with_savings: 2
+    - id: guide
+      child_label: "Наставник"
+      requires:
+        periods_completed: 7
+        avg_essential_coverage: 0.90
+        avg_plan_adherence: 0.75
+        periods_with_savings: 4
+        goals_reached: 1
+
+# Причины изменения состояния. Код попадает в телеметрию, текст живёт в
+# приложении — так объяснение локализуется, а персональные данные не собираются.
+reason_codes:
+  - code: essentials_covered
+    child_text: "Ты закрыл всё обязательное — питомец бодрый."
+  - code: essentials_missed
+    child_text: "Обязательное осталось не куплено. Добавь его в план следующего периода."
+  - code: plan_followed
+    child_text: "Факт совпал с планом — так держать."
+  - code: plan_overspent
+    child_text: "Потрачено больше, чем планировал. Попробуй уменьшить желаемое."
+  - code: savings_regular
+    child_text: "Ты откладываешь регулярно — цель заметно ближе."
+  - code: savings_skipped
+    child_text: "В этот раз отложить не вышло. Начни с небольшой суммы."
+  - code: unexpected_expense
+    child_text: "Появился непредвиденный расход. Такое бывает, это не ошибка."
+  - code: goal_reached
+    child_text: "Цель достигнута. Можно выбрать новую."

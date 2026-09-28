@@ -1,0 +1,198 @@
+name: ML service CI
+
+# Scoped to `ml_service/`: this repository also holds the backend and the mobile
+# app, and a change to either of those must not spend minutes running dbt.
+on:
+  push:
+    branches: [main, dev_main, dev_ml]
+    paths: ["ml_service/**", ".github/workflows/ml_service.yml"]
+  pull_request:
+    paths: ["ml_service/**", ".github/workflows/ml_service.yml"]
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: ml_service
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+  MONETKA_RUN_MODE: ci
+  MONETKA_LOG_LEVEL: WARNING
+
+jobs:
+  # ---------------------------------------------------------------- lint ----
+  lint:
+    name: Lint & types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          # setup-python resolves this from the repository root, not from
+          # `defaults.run.working-directory`.
+          cache-dependency-path: ml_service/pyproject.toml
+      - run: pip install -e ".[dev]"
+      - run: ruff check src tests
+      - run: ruff format --check src tests
+      - run: mypy
+      # Static validation of the container stack: port collisions, missing bind
+      # mounts, undocumented env vars, dangling depends_on. Needs no daemon.
+      - run: monetka stack-check
+
+  # -------------------------------------------------------------- secrets ---
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # ТЗ §3.4 — «в репозитории отсутствуют пароли, токены, закрытые ключи
+      # подписи». Scanning the full history, not just the diff: a key removed in
+      # a later commit is still a leaked key.
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ----------------------------------------------------------------- test ---
+  test:
+    name: Tests (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - run: pip install -e ".[dev,transform]"
+      - name: dbt deps
+        run: dbt deps --project-dir transform/dbt_monetka --profiles-dir transform/dbt_monetka
+      - name: pytest
+        run: pytest --cov=monetka --cov-report=xml --cov-report=term
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-${{ matrix.python }}
+          path: ml_service/coverage.xml
+          retention-days: 7
+
+  # ----------------------------------------------------------------- demo ---
+  demo:
+    name: End-to-end pipeline
+    runs-on: ubuntu-latest
+    needs: [lint]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          # setup-python resolves this from the repository root, not from
+          # `defaults.run.working-directory`.
+          cache-dependency-path: ml_service/pyproject.toml
+      - run: pip install -e ".[dev,transform]"
+      - run: dbt deps --project-dir transform/dbt_monetka --profiles-dir transform/dbt_monetka
+
+      # The same command a reviewer runs first. If this breaks, the README lies.
+      - name: monetka demo
+        run: monetka demo --players 600 --periods 8
+
+      # Quality and the model gates already run inside `demo`; re-running drift
+      # separately keeps its output visible in the job log.
+      - name: Drift report
+        run: monetka drift
+
+      - name: Check the exported artefacts are phone-sized
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import sys
+
+          models = sorted(Path("artifacts/models").glob("*.onnx"))
+          if not models:
+              sys.exit("no ONNX artefacts were produced")
+          for path in models:
+              size_mb = path.stat().st_size / 1_048_576
+              print(f"{path.name}: {size_mb:.2f} MB")
+              # ТЗ §3.1.3 targets a 3 GB device; models ship inside the APK.
+              if size_mb > 5:
+                  sys.exit(f"{path.name} is {size_mb:.1f} MB — too large to ship in an APK")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: onnx-models
+          path: ml_service/artifacts/models/
+          retention-days: 14
+
+  # ---------------------------------------------------------------- build ---
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    needs: [lint]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build runtime image
+        uses: docker/build-push-action@v6
+        with:
+          context: ml_service
+          file: ml_service/infra/docker/Dockerfile
+          target: runtime
+          push: false
+          load: true
+          tags: monetka/platform:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke-test the image
+        run: |
+          docker run --rm monetka/platform:ci monetka --help
+          docker run --rm monetka/platform:ci python -c "import monetka; print(monetka.__version__)"
+      - name: Fail if the image runs as root
+        run: |
+          user=$(docker run --rm monetka/platform:ci id -un)
+          echo "container user: $user"
+          test "$user" != "root"
+
+  # ----------------------------------------------------------- dbt checks ---
+  dbt:
+    name: dbt build & docs
+    runs-on: ubuntu-latest
+    needs: [lint]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          # setup-python resolves this from the repository root, not from
+          # `defaults.run.working-directory`.
+          cache-dependency-path: ml_service/pyproject.toml
+      - run: pip install -e ".[dev,transform]"
+      - run: dbt deps --project-dir transform/dbt_monetka --profiles-dir transform/dbt_monetka
+
+      # A warehouse is needed before dbt has anything to build against.
+      - run: monetka generate --players 300 --periods 8
+      - run: monetka bronze && monetka silver
+
+      - name: dbt build (models + tests)
+        run: dbt build --project-dir transform/dbt_monetka --profiles-dir transform/dbt_monetka
+      - name: dbt docs generate
+        run: dbt docs generate --project-dir transform/dbt_monetka --profiles-dir transform/dbt_monetka
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dbt-docs
+          path: ml_service/transform/dbt_monetka/target/
+          retention-days: 7

@@ -1,0 +1,105 @@
+version: 2
+
+sources:
+  - name: silver
+    description: >-
+      Typed, deduplicated facts produced by the ingestion layer
+      (`src/monetka/ingestion/silver.py`). dbt reads silver and owns everything
+      downstream of it.
+    schema: silver
+    tables:
+      - name: dim_profile
+        description: One row per local game profile. Carries no personal data — the
+          child's game name and the pet's name never leave the device (ТЗ §3.5).
+        columns:
+          - name: profile_pseudo_id
+            description: Random UUIDv4 minted on device, destroyed on profile reset.
+            data_tests: [unique, not_null]
+          - name: pet_combination
+            description: species/colour/accessory — ТЗ §2.6 requires ≥9 distinct values.
+            data_tests: [not_null]
+
+      - name: fct_period
+        description: Closed game period — the plan-versus-fact record (ТЗ §2.5.5).
+        columns:
+          - name: profile_pseudo_id
+            data_tests: [not_null]
+          - name: closed_period_no
+            data_tests: [not_null]
+          - name: essential_coverage
+            data_tests:
+              - dbt_utils.accepted_range:
+                  min_value: 0
+                  max_value: 1
+                  inclusive: true
+          - name: plan_adherence
+            data_tests:
+              - dbt_utils.accepted_range:
+                  min_value: 0
+                  max_value: 1
+                  inclusive: true
+
+      - name: fct_budget_plan
+        description: Submitted budget plans. `unallocated` must never be negative —
+          the app forbids allocating more than is available (ТЗ §2.5.5).
+        columns:
+          - name: unallocated
+            data_tests:
+              - dbt_utils.accepted_range:
+                  min_value: 0
+
+      - name: fct_purchase
+        description: Confirmed purchases. Balance arithmetic is enforced at the
+          contract level, re-checked here as a regression guard.
+        columns:
+          - name: balance_after
+            data_tests:
+              - dbt_utils.accepted_range:
+                  min_value: 0
+          - name: item_category
+            data_tests:
+              - accepted_values:
+                  values: ["essential", "optional"]
+
+      - name: fct_purchase_rejected
+        description: Attempts blocked because funds were insufficient. Not a failure —
+          the app explains what is missing (ТЗ §2.5.6).
+
+      - name: fct_quest_attempt
+        description: Completed quests with outcome and reward.
+        columns:
+          - name: topic
+            data_tests:
+              - accepted_values:
+                  values: ["budgeting", "saving", "payments"]
+          - name: outcome
+            data_tests:
+              - accepted_values:
+                  values: ["optimal", "suboptimal", "poor"]
+
+      - name: fct_savings
+        description: Deposits (positive amount) and withdrawals (negative amount).
+        columns:
+          - name: direction
+            data_tests:
+              - accepted_values:
+                  values: ["deposit", "withdrawal"]
+
+      - name: fct_hint
+        description: >-
+          Every hint the Советник showed, with model attribution when a model
+          chose the wording. This is the production prediction log — the only
+          signal the device emits about how the deployed model behaves.
+        columns:
+          - name: hint_source
+            data_tests:
+              - accepted_values:
+                  values: ["rule", "model"]
+          - name: hint_id
+            data_tests: [not_null]
+
+      - name: fct_goal_event
+      - name: fct_income
+      - name: fct_pet_stage
+      - name: fct_pet_state
+      - name: fct_app_open

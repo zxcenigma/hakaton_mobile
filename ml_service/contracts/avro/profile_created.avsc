@@ -1,0 +1,33 @@
+{
+  "type": "record",
+  "name": "ProfileCreatedPayload",
+  "namespace": "ru.mos.monetka.events.v1",
+  "doc": "No game name, no pet name — only the closed-vocabulary appearance codes.",
+  "fields": [
+    {
+      "name": "pet_species",
+      "type": {
+        "type": "map",
+        "values": "string"
+      }
+    },
+    {
+      "name": "pet_colour",
+      "type": {
+        "type": "map",
+        "values": "string"
+      }
+    },
+    {
+      "name": "pet_accessory",
+      "type": {
+        "type": "map",
+        "values": "string"
+      }
+    },
+    {
+      "name": "onboarding_seconds",
+      "type": "long"
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "type": "record",
+  "name": "HintShownPayload",
+  "namespace": "ru.mos.monetka.events.v1",
+  "doc": "A hint surfaced to the child, possibly chosen by a model.\n\nThe model may only *choose which explanation to show*. It can never change\nthe balance, block a purchase or alter the pet — that logic is deterministic\nand lives on device. See ``docs/ml-cards/`` for the guardrails.",
+  "fields": [
+    {
+      "name": "hint_id",
+      "type": "string"
+    },
+    {
+      "name": "trigger",
+      "type": "string"
+    },
+    {
+      "name": "advisor_arm",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "model_name",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "model_version",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "predicted_segment",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "inference_latency_ms",
+      "type": [
+        "null",
+        "long"
+      ],
+      "default": null
+    }
+  ]
+}
