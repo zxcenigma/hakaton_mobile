@@ -59,6 +59,15 @@ WORKDIR /app
 COPY --chown=monetka:monetka src ./src
 COPY --chown=monetka:monetka content ./content
 COPY --chown=monetka:monetka transform ./transform
+# `contracts/` is generated from the event models, and `monetka contracts`
+# rewrites it — including inside the container, which is how you check that the
+# generation is deterministic. It is output, not source, so it is the one copied
+# directory the runtime user may write to.
+COPY --chown=monetka:monetka contracts ./contracts
+# Read by `monetka stack-check`. Small, and without them that command fails in
+# the image with a missing-file error that says nothing about the real cause.
+COPY --chown=monetka:monetka infra ./infra
+COPY --chown=monetka:monetka docker-compose.yml .env.template ./
 # `pyproject.toml` is not decoration here: `_detect_repo_root()` uses it to tell
 # a checkout from an installed package. Without it beside the working directory
 # the settings fall back to site-packages, which uid 999 cannot write, and the
@@ -74,7 +83,16 @@ RUN dbt deps --project-dir /app/transform/dbt_monetka --profiles-dir /app/transf
 
 # Writable paths for artefacts and the local warehouse; both are bind-mounted
 # in compose, so this only matters for a standalone run.
-RUN mkdir -p /app/data /app/artifacts && chown -R monetka:monetka /app/data /app/artifacts
+#
+# `/app/.duckdb` is the third one and the least obvious: the runtime user's home
+# is /app, and DuckDB creates `$HOME/.duckdb` for its extensions the first time
+# it opens a connection. /app itself stays owned by root — a container that can
+# rewrite its own source tree is exactly what the non-root user is for — so the
+# one directory DuckDB needs is created here instead. Without it dbt died with
+# `IO Error: Failed to create directory "/app/.duckdb": Permission denied`,
+# which reads like a dbt problem and is not one.
+RUN mkdir -p /app/data /app/artifacts /app/.duckdb \
+ && chown -R monetka:monetka /app/data /app/artifacts /app/.duckdb
 
 USER monetka
 
