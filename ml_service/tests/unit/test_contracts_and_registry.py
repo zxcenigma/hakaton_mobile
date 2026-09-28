@@ -154,3 +154,50 @@ def test_lookup_of_unknown_feature_explains_itself() -> None:
 
 def test_describe_covers_every_feature() -> None:
     assert len(registry.describe()) == len(registry.FEATURES)
+
+
+class TestMlflowReachabilityProbe:
+    """Training must not stall on a tracking server that is not running.
+
+    The default compose profile has no MLflow, while `common-env` still points
+    every service at `http://mlflow:5000`. MLflow's client retries an
+    unreachable server seven times with exponential backoff before raising, so
+    each of the three models spent minutes failing to log before falling back to
+    the local registry it was always going to use.
+    """
+
+    def test_a_closed_port_is_not_reachable(self) -> None:
+        from monetka.ml.registry import _tracking_server_reachable
+
+        assert _tracking_server_reachable("http://127.0.0.1:59999") is False
+
+    def test_a_listening_port_is_reachable(self) -> None:
+        import socket as socket_module
+
+        from monetka.ml.registry import _tracking_server_reachable
+
+        server = socket_module.socket()
+        server.bind(("127.0.0.1", 0))
+        server.listen(1)
+        try:
+            port = server.getsockname()[1]
+            assert _tracking_server_reachable(f"http://127.0.0.1:{port}") is True
+        finally:
+            server.close()
+
+    def test_a_non_http_uri_is_never_probed(self) -> None:
+        """`file:` tracking is local: probing it would be meaningless, not slow."""
+        from monetka.ml.registry import _tracking_server_reachable
+
+        assert _tracking_server_reachable("file:///tmp/mlruns") is True
+        assert _tracking_server_reachable("./mlruns") is True
+
+    def test_the_probe_returns_quickly(self) -> None:
+        import time
+
+        from monetka.ml.registry import _tracking_server_reachable
+
+        started = time.perf_counter()
+        _tracking_server_reachable("http://127.0.0.1:59999", timeout_s=0.5)
+        elapsed = time.perf_counter() - started
+        assert elapsed < 3.0, f"probe took {elapsed:.1f}s — the point is that it does not wait"

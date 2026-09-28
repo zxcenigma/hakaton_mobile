@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import socket
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -217,6 +218,33 @@ def new_version() -> str:
     return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
+def _tracking_server_reachable(uri: str, timeout_s: float = 0.5) -> bool:
+    """Is there something listening at `uri`? One connection attempt, no retries.
+
+    The failure path matters more than the success path here. MLflow's client
+    retries an unreachable server seven times with exponential backoff and
+    prints each attempt, so in the default compose profile — which does not
+    include MLflow, while `common-env` still points at it — every training run
+    stalled for minutes per model and filled the log with resolver errors
+    before falling back to the local registry it was always going to use.
+
+    A non-HTTP tracking URI (`file:`, a local path) needs no probe: those are
+    handled by MLflow locally and cannot hang on the network.
+    """
+    from urllib.parse import urlparse
+
+    parsed = urlparse(uri)
+    if parsed.scheme not in {"http", "https"}:
+        return True
+
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    try:
+        with socket.create_connection((parsed.hostname, port), timeout=timeout_s):
+            return True
+    except OSError:
+        return False
+
+
 def _log_to_mlflow(model: object, card: ModelCard) -> None:
     """Mirror the run into MLflow when a tracking server is configured.
 
@@ -229,6 +257,10 @@ def _log_to_mlflow(model: object, card: ModelCard) -> None:
         import mlflow
     except ImportError:
         log.debug("mlflow_not_installed")
+        return
+
+    if not _tracking_server_reachable(settings.mlflow_tracking_uri):
+        log.info("mlflow_unreachable_skipped", uri=settings.mlflow_tracking_uri)
         return
 
     try:
