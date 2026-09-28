@@ -1,0 +1,39 @@
+FROM python:3.12-slim AS builder
+
+ENV PIP_NO_CACHE_DIR=1 \
+    POETRY_NO_INTERACTION=1 \
+    VIRTUAL_ENV=/opt/venv
+
+RUN pip install poetry==2.4.1 \
+    && python -m venv ${VIRTUAL_ENV}
+ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
+
+WORKDIR /build
+COPY packages/pyproject.toml packages/poetry.lock ./
+RUN poetry install --only main --no-root --no-cache
+
+FROM python:3.12-slim AS monoapi
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/opt/venv/bin:${PATH}"
+
+ARG APP_USER=Spectre
+ARG APP_UID=1000
+ARG APP_GID=1000
+RUN if ! getent group ${APP_GID} >/dev/null; then groupadd --gid ${APP_GID} ${APP_USER}; fi \
+    && useradd --no-log-init --non-unique --uid ${APP_UID} --gid ${APP_GID} ${APP_USER}
+
+WORKDIR /monoapi
+COPY --from=builder /opt/venv /opt/venv
+COPY --chown=${APP_UID}:${APP_GID} . ./
+RUN mkdir -p monoapi/logs \
+    monoapi/public/image/breakfast \
+    monoapi/public/image/lunch \
+    monoapi/public/image/dinner \
+    && chown -R ${APP_UID}:${APP_GID} monoapi/logs monoapi/public \
+    && chmod +x docker/monoapi_entrypoint.sh
+
+USER ${APP_UID}:${APP_GID}
+EXPOSE 6767
+ENTRYPOINT ["./docker/monoapi_entrypoint.sh"]
