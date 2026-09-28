@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import textwrap
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 import yaml
@@ -222,7 +223,7 @@ class TestEnvTemplateCoversSettings:
     #: Paths default to directories inside `ml_service/`. Writing an absolute
     #: path into a template that gets copied verbatim is worse than omitting it:
     #: it would point at the author's machine.
-    OMITTED_ON_PURPOSE = {
+    OMITTED_ON_PURPOSE: ClassVar[set[str]] = {
         "data_dir",
         "warehouse_path",
         "artifacts_dir",
@@ -242,8 +243,7 @@ class TestEnvTemplateCoversSettings:
         missing = sorted(
             f"MONETKA_{name.upper()}"
             for name in Settings.model_fields
-            if name not in self.OMITTED_ON_PURPOSE
-            and f"MONETKA_{name.upper()}" not in documented
+            if name not in self.OMITTED_ON_PURPOSE and f"MONETKA_{name.upper()}" not in documented
         )
         assert not missing, f"settings absent from .env.template: {missing}"
 
@@ -261,3 +261,45 @@ class TestEnvTemplateCoversSettings:
             if key.startswith("MONETKA_") and key not in known
         )
         assert not unknown, f".env.template sets settings that do not exist: {unknown}"
+
+
+class TestDockerfileExtras:
+    """An extra that pyproject does not declare must fail the check, not the build.
+
+    pip treats an unknown extra as a warning buried in hundreds of lines of
+    download output, installs everything else and exits 0. The Dockerfile asked
+    for a `quality` extra that never existed, and the image built cleanly for as
+    long as it was there.
+    """
+
+    def test_the_shipped_dockerfiles_name_only_real_extras(self) -> None:
+        from monetka.common.config import REPO_ROOT
+        from monetka.infra.stack import validate_dockerfile
+
+        dockerfiles = sorted((REPO_ROOT / "infra" / "docker").glob("Dockerfile*"))
+        assert dockerfiles, "no Dockerfiles found — the glob or the layout changed"
+        for path in dockerfiles:
+            bad = [f for f in validate_dockerfile(path) if f.check == "extra_declared"]
+            assert not bad, [f.detail for f in bad]
+
+    def test_an_undeclared_extra_is_reported(self, tmp_path) -> None:
+        from monetka.infra.stack import validate_dockerfile
+
+        probe = tmp_path / "Dockerfile"
+        probe.write_text(
+            'FROM python:3.12-slim\nRUN pip install ".[stream,not-a-real-extra]"\nUSER nobody\n',
+            encoding="utf-8",
+        )
+        reported = [f for f in validate_dockerfile(probe) if f.check == "extra_declared"]
+        assert len(reported) == 1
+        assert "not-a-real-extra" in reported[0].detail
+
+    def test_a_declared_extra_is_accepted(self, tmp_path) -> None:
+        from monetka.infra.stack import validate_dockerfile
+
+        probe = tmp_path / "Dockerfile"
+        probe.write_text(
+            'FROM python:3.12-slim\nRUN pip install ".[stream,lake]"\nUSER nobody\n',
+            encoding="utf-8",
+        )
+        assert not [f for f in validate_dockerfile(probe) if f.check == "extra_declared"]

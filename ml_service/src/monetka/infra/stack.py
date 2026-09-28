@@ -365,4 +365,55 @@ def validate_dockerfile(path: Path) -> list[Finding]:
                 "write its own source tree is an avoidable risk",
             )
         )
+
+    findings.extend(_check_declared_extras(path, lines))
+    return findings
+
+
+#: `pip install ".[stream,lake]"` — the bracketed group in a Dockerfile.
+_EXTRAS_PATTERN = re.compile(r'pip\s+install\s+"\.\[([^\]]+)\]"')
+
+
+def _check_declared_extras(path: Path, lines: list[str]) -> list[Finding]:
+    """Every extra the Dockerfile installs must exist in `pyproject.toml`.
+
+    pip does not fail on an unknown extra. It prints
+    `WARNING: ... does not provide the extra 'quality'` in the middle of several
+    hundred lines of download progress and installs everything else, so the
+    image builds, the tests pass, and nobody finds out until the day the extra
+    was supposed to bring something in.
+
+    That is exactly what happened: the Dockerfile asked for a `quality` extra
+    that was never declared. Nothing was missing — the data-quality checks have
+    no third-party dependencies — but the build file claimed something untrue
+    about itself for as long as it existed.
+    """
+    import tomllib
+
+    pyproject = REPO_ROOT / "pyproject.toml"
+    if not pyproject.exists():
+        return []
+
+    declared = set(
+        tomllib.loads(pyproject.read_text(encoding="utf-8"))
+        .get("project", {})
+        .get("optional-dependencies", {})
+    )
+
+    findings: list[Finding] = []
+    for raw in lines:
+        match = _EXTRAS_PATTERN.search(raw)
+        if not match:
+            continue
+        for extra in (part.strip() for part in match.group(1).split(",")):
+            if extra and extra not in declared:
+                findings.append(
+                    Finding(
+                        "error",
+                        "extra_declared",
+                        f"{path.name}: installs `.[{extra}]`, which pyproject.toml "
+                        f"does not declare — pip only warns and moves on. "
+                        f"Known extras: {', '.join(sorted(declared))}",
+                    )
+                )
     return findings

@@ -32,7 +32,7 @@ RUN pip install --upgrade pip setuptools wheel
 COPY pyproject.toml README.md ./
 RUN mkdir -p src/monetka \
  && touch src/monetka/__init__.py \
- && pip install ".[stream,lake,transform,quality,mlops]" \
+ && pip install ".[stream,lake,transform,mlops]" \
  && pip uninstall -y monetka-data-platform
 
 # Now the real source, installed without touching the dependency tree.
