@@ -256,6 +256,16 @@ services:
     environment:
       <<: *common-env
     command: ["python", "-m", "monetka.ingestion.stream_consumer"]
+    # The image's HEALTHCHECK probes the API on port 8000. This service is a
+    # Kafka consumer and listens on nothing, so it inherited a check it could
+    # never pass and sat at `unhealthy` forever while working correctly — the
+    # kind of permanent red that teaches people to ignore the column.
+    #
+    # Disabled rather than replaced: liveness for a consumer means «is it still
+    # committing offsets», which needs the broker, not a shell probe. Nothing
+    # waits on this service's health.
+    healthcheck:
+      disable: true
     restart: unless-stopped
     volumes:
       - ./data:/app/data

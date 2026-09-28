@@ -49,14 +49,22 @@ DEFAULT_OUTPUT = HERE / "monetka-lct2026.pptx"
 #: marker that blends in is a marker that ships.
 TODO = "‹ЗАПОЛНИТЬ›"
 
-#: Template slides to keep, in the order they should appear. 7–11 are the
-#: mandatory ones; the rest are layouts we fill with our own content.
-KEEP = [
-    7,  # титул
+#: The five slides the organisers require. This is the default output: a
+#: submission that contains exactly what was asked for cannot be marked down
+#: for containing something else.
+MANDATORY = [
+    7,  # титул — название команды
     8,  # о команде + описание решения + уникальность
     9,  # участники
     10,  # история команды, выбор задачи, сложности
     11,  # коротко о решении
+]
+
+#: Added by `--extended`. Every one of these is a layout the template itself
+#: provides — «Проблема и решение», «Стадии», «Статистика», «Пункты» — filled
+#: with our content. Nothing is redrawn: the fonts, colours and box positions
+#: are the organisers'. Use them only if the rules allow slides beyond 7–11.
+OPTIONAL = [
     24,  # «Проблема и решение»
     25,  # «Стадии» — путь данных
     21,  # «Статистика» — измеренные показатели
@@ -479,9 +487,12 @@ def fill_next_steps(slide) -> None:
 # --------------------------------------------------------------------------
 
 
-def build(template: Path, output: Path, numbers: dict[str, str]) -> Presentation:
+def build(
+    template: Path, output: Path, numbers: dict[str, str], *, extended: bool = False
+) -> Presentation:
     prs = Presentation(str(template))
-    delete_slides(prs, KEEP)
+    keep = MANDATORY + (OPTIONAL if extended else [])
+    delete_slides(prs, keep)
 
     slides = list(prs.slides)
     fill_title(slides[0])
@@ -489,11 +500,12 @@ def build(template: Path, output: Path, numbers: dict[str, str]) -> Presentation
     fill_members(slides[2])
     fill_team_story(slides[3])
     fill_solution_summary(slides[4])
-    fill_problem_solution(slides[5])
-    fill_stages(slides[6])
-    fill_statistics(slides[7], numbers)
-    fill_tz_points(slides[8])
-    fill_next_steps(slides[9])
+    if extended:
+        fill_problem_solution(slides[5])
+        fill_stages(slides[6])
+        fill_statistics(slides[7], numbers)
+        fill_tz_points(slides[8])
+        fill_next_steps(slides[9])
 
     renumber(prs)
 
@@ -520,6 +532,11 @@ def main() -> int:
     parser.add_argument("--template", type=Path, default=DEFAULT_TEMPLATE)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--todo", action="store_true", help="only list what is unfilled")
+    parser.add_argument(
+        "--extended",
+        action="store_true",
+        help="добавить 5 слайдов на макетах шаблона (только если правила это допускают)",
+    )
     parser.add_argument("--tests", default="300")
     parser.add_argument("--dbt-tests", default="58")
     parser.add_argument("--accuracy", default="0.8415")
@@ -540,7 +557,8 @@ def main() -> int:
     build(
         args.template,
         args.output,
-        {
+        extended=args.extended,
+        numbers={
             "tests": args.tests,
             "dbt_tests": args.dbt_tests,
             "accuracy": args.accuracy,
