@@ -78,6 +78,33 @@ OPTIONAL = [
 # --------------------------------------------------------------------------
 
 
+DEFAULT_TEAM_FILE = HERE / "team.yaml"
+
+
+def load_team(path: Path) -> dict:
+    """Read the team's own details, if they have been filled in yet.
+
+    Everything this script cannot know — names, phone numbers, handles, the
+    city, how the team formed — lives in one YAML file instead of being typed
+    into PowerPoint by hand. A missing file, an empty file or a blank field all
+    behave the same way: the slide keeps its marker and `--todo` still lists it,
+    so a half-filled file is obvious rather than quietly shipping.
+    """
+    if not path.exists():
+        return {}
+    import yaml
+
+    loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def value(source: dict, key: str, fallback: str) -> str:
+    """A filled-in field, or the marker. Whitespace counts as unfilled."""
+    raw = source.get(key)
+    text = str(raw).strip() if raw is not None else ""
+    return text or f"{TODO} {fallback}"
+
+
 def delete_slides(prs: Presentation, keep: list[int]) -> None:
     """Keep `keep` (1-based template numbers) in that order, drop everything else.
 
@@ -158,6 +185,37 @@ def renumber(prs: Presentation) -> None:
                 set_text(shape, str(index))
 
 
+def capacity(shape, size_pt: float) -> int:
+    """Roughly how many characters fit in this box at this size.
+
+    PowerPoint does not reflow overflowing text — it draws it outside the box,
+    over whatever is underneath. The organisers asked that the content be fitted
+    to the template, so «it renders» is not the bar: it has to stay inside.
+
+    The estimate is deliberately crude (average glyph ≈ 0.5em, line pitch 1.25)
+    and only has to catch the case that matters, which is text that is twice the
+    size of its box.
+    """
+    from pptx.util import Emu
+
+    width_in = Emu(shape.width).inches
+    height_in = Emu(shape.height).inches
+    chars_per_line = max(1, int(width_in * 72 / (size_pt * 0.5)))
+    lines = max(1, int(height_in * 72 / (size_pt * 1.25)))
+    return chars_per_line * lines
+
+
+def check_fits(shape, lines: list[str], size_pt: float) -> None:
+    """Refuse text that will spill out of its box."""
+    total = sum(len(line) for line in lines) + len(lines)
+    room = capacity(shape, size_pt)
+    if total > room:
+        raise ValueError(
+            f"текст {total} символов не влезает в бокс {shape.name!r} "
+            f"(вмещает ≈{room} при {size_pt} pt) — сократите или уменьшите кегль"
+        )
+
+
 def set_text(shape, lines: list[str] | str, *, size_pt: float | None = None) -> None:
     """Replace a shape's text, keeping the template's formatting.
 
@@ -168,6 +226,8 @@ def set_text(shape, lines: list[str] | str, *, size_pt: float | None = None) -> 
     """
     if isinstance(lines, str):
         lines = [lines]
+    if size_pt is not None:
+        check_fits(shape, lines, size_pt)
     frame = shape.text_frame
     if not frame.paragraphs or not frame.paragraphs[0].runs:
         frame.text = "\n".join(lines)
@@ -203,17 +263,17 @@ def set_text(shape, lines: list[str] | str, *, size_pt: float | None = None) -> 
 # --------------------------------------------------------------------------
 
 
-def fill_title(slide) -> None:
+def fill_title(slide, team: dict) -> None:
     """Slide 7 — the cover. Organisers: this is the team name, nothing else."""
     title = find(slide, "Заголовок 2")
     if title is not None:
-        set_text(title, TODO + " название команды")
+        set_text(title, value(team, "name", "название команды"))
     subtitle = find(slide, "Текст 4")
     if subtitle is not None:
         set_text(subtitle, "«Монетка» — Департамент финансов города Москвы")
 
 
-def fill_about_team(slide) -> None:
+def fill_about_team(slide, team: dict) -> None:
     """Slide 8 — about the team, what the solution does, what is unique."""
     # The template leaves these title boxes empty; an untitled slide in a
     # submission reads as unfinished.
@@ -224,14 +284,17 @@ def fill_about_team(slide) -> None:
         text = shape.text_frame.text
 
         if text.startswith("Капитан"):
+            filled = [
+                m for m in team.get("members") or [] if str(m.get("name", "")).strip()
+            ]
+            headcount = str(len(filled)) if filled else f"{TODO} сколько"
             set_text(
                 shape,
                 [
-                    f"Капитан: {TODO} ФИО, специальность",
-                    f"Кол-во участников: {TODO} человек",
-                    f"Краткое описание: {TODO} как образовалась команда,",
-                    f"место работы/учёбы участников",
-                    f"Город и регион: {TODO}",
+                    f"Капитан: {value(team, 'captain', 'ФИО, специальность')}",
+                    f"Кол-во участников: {headcount}",
+                    f"Краткое описание: {value(team, 'summary', 'как собрались, где учитесь или работаете')}",
+                    f"Город и регион: {value(team, 'city', 'город, регион')}",
                 ],
             )
 
@@ -239,50 +302,65 @@ def fill_about_team(slide) -> None:
             set_text(
                 shape,
                 [
-                    "Мобильное приложение для детей 7–11 лет: ребёнок получает доход, "
-                    "распределяет его между обязательным, желаемым и накоплениями, "
-                    "покупает в каталоге и копит на цель. Состояние виртуального "
-                    "котика отражает качество решений и делает последствия наглядными. "
-                    "Взрослый видит прогресс в отдельном разделе. Основной цикл "
-                    "работает офлайн, без сервера."
+                    "Приложение для детей 7–11 лет: ребёнок получает доход, делит его "
+                    "между обязательным, желаемым и накоплениями, покупает в каталоге и "
+                    "копит на цель. Котик отражает качество решений — последствие видно "
+                    "сразу. Взрослый видит прогресс отдельно. Основной цикл работает "
+                    "офлайн, без сервера."
                 ],
+                size_pt=10,
             )
 
         elif text.startswith("Что делает ваше решение"):
             set_text(
                 shape,
                 [
-                    "Каждое решение ребёнка объясняется словами, а не баллами: "
-                    "приложение всегда называет причину. Объяснение выбирает модель, "
-                    "но если она недоступна или отвечает дольше 50 мс — показывается "
-                    "правило, поэтому приложение полноценно работает без сети и без ML. "
-                    "Экономику игры модели не трогают вообще: цены и доход одинаковы "
-                    "для всех. Персональные данные детей не собираются — это проверяет "
-                    "код, а не обещает документация."
+                    "Каждое решение объясняется словами, а не баллами. Объяснение "
+                    "выбирает модель, но при её отказе или ответе дольше 50 мс работает "
+                    "правило — приложение полноценно и без сети, и без ML. Экономику "
+                    "игры модели не трогают: цены и доход одинаковы для всех. "
+                    "Персональные данные детей не собираются — это проверяет код."
                 ],
+                size_pt=10,
             )
 
 
-def fill_members(slide) -> None:
+def fill_members(slide, team: dict) -> None:
     """Slide 9 — five member cards. Nothing here can be filled for the team."""
     set_text(title_of(slide), "КОМАНДА")
-    for shape in shapes_named(slide, "Текст 8"):
-        text = shape.text_frame.text
-        if text.startswith("Имя Фамилия"):
-            set_text(shape, f"{TODO} Имя Фамилия")
-        elif text.startswith("Роль в команде"):
-            set_text(
-                shape,
-                [
-                    f"{TODO} роль в команде",
-                    f"{TODO} ник в мессенджере",
-                    f"{TODO} номер телефона",
-                    f"{TODO} место работы/учёбы",
-                ],
-            )
+    members = list(team.get("members") or [])
+    name_boxes = [
+        s for s in shapes_named(slide, "Текст 8") if s.text_frame.text.startswith("Имя")
+    ]
+    detail_boxes = [
+        s for s in shapes_named(slide, "Текст 8") if s.text_frame.text.startswith("Роль")
+    ]
+    # The template holds exactly five cards. A longer list is refused rather
+    # than silently truncated: a participant missing from a submission is not
+    # something to discover afterwards.
+    if len(members) > len(name_boxes):
+        raise ValueError(
+            f"в team.yaml {len(members)} участников, а в шаблоне {len(name_boxes)} карточек"
+        )
+
+    for index, shape in enumerate(name_boxes):
+        member = members[index] if index < len(members) else {}
+        set_text(shape, value(member, "name", "Имя Фамилия"))
+
+    for index, shape in enumerate(detail_boxes):
+        member = members[index] if index < len(members) else {}
+        set_text(
+            shape,
+            [
+                value(member, "role", "роль в команде"),
+                value(member, "messenger", "ник в мессенджере"),
+                value(member, "phone", "номер телефона"),
+                value(member, "affiliation", "место работы/учёбы"),
+            ],
+        )
 
 
-def fill_team_story(slide) -> None:
+def fill_team_story(slide, team: dict) -> None:
     """Slide 10 — history, why this task, what was hard.
 
     Blocks 01 and 02 are the team's own story and are only sketched. Block 03
@@ -296,10 +374,7 @@ def fill_team_story(slide) -> None:
         if text.startswith("Расскажите, как вы собрались"):
             set_text(
                 shape,
-                [
-                    f"{TODO} как собрались, участвовали ли вместе раньше, "
-                    "интересные факты о команде."
-                ],
+                [value(team, "history", "как собрались, участвовали ли вместе раньше")],
             )
 
         elif text.startswith("Что вас вдохновило"):
@@ -336,22 +411,32 @@ def fill_solution_summary(slide) -> None:
         set_text(
             tech,
             [
-                "Приложение на Flutter, игровой цикл целиком на устройстве: "
-                "локальная база, никакой зависимости от сети.",
+                "Игровой цикл целиком на устройстве: локальная база, ноль зависимости "
+                "от сети (ТЗ §3.1.5).",
                 "",
-                "Рядом — сервис данных и ML. События приложения проходят по слоям "
-                "bronze → silver → gold (dbt), обучение идёт с гейтами качества: "
-                "модель не выкладывается, если не прошла порог. Модели "
-                "конвертируются в ONNX и проверяются на совпадение ответов с "
-                "исходной версией, после чего работают прямо на устройстве.",
+                "ЗАЧЕМ ЗДЕСЬ ML. ТЗ его не требует — §2.7.5 выносит ИИ и ML за "
+                "обязательный минимум. Поэтому применяем только там, где §3.2 "
+                "разрешает, и отвечаем на все три его условия.",
                 "",
-                "Стек: Python, DuckDB, dbt, Iceberg, Trino, Redpanda, MLflow, "
-                "FastAPI, ONNX Runtime, Docker Compose.",
+                "Задача. Три модели: какое объяснение показать в «Советнике», в каком "
+                "порядке предложить задания, какие периоды показать методисту. "
+                "Экономику игры не трогает ни одна — это отдельное решение в "
+                "репозитории.",
                 "",
-                "Персональные данные детей не собираются: контракты событий "
-                "отвергают такие поля, и сборка падает.",
+                "Данные. Только синтетика. Персональные данные детей не собираются: "
+                "контракты отвергают такие поля, сборка падает, API отвечает 422.",
+                "",
+                "Контроль. Гейты качества: не прошла — не выкладывается, и challenger "
+                "должен быть не хуже действующей. Разделение выборки по игрокам. "
+                "Проверка совпадения ответов после конвертации в ONNX. Мониторинг "
+                "дрейфа. Граница применимости выведена из данных: точность падает с "
+                "0.83 на 4-м периоде до 0.46 на 10-м, поэтому дальше 5-го модель "
+                "воздерживается и отвечает правило.",
+                "",
+                "Стек: Python, DuckDB, dbt, Iceberg, Trino, Redpanda, MLflow, FastAPI, "
+                "ONNX Runtime, Docker Compose.",
             ],
-            size_pt=11,
+            size_pt=10,
         )
 
     market = find(slide, "Текст 6")
@@ -359,22 +444,31 @@ def fill_solution_summary(slide) -> None:
         set_text(
             market,
             [
-                "Ближайшее — пилот в московских школах и библиотеках: приложение "
-                "работает офлайн, поэтому не требует ни сети в классе, ни "
-                "регистрации ребёнка.",
+                "Пилот в школах и библиотеках. Приложение работает офлайн, поэтому не "
+                "требует ни сети в классе, ни регистрации ребёнка — внедряется там, "
+                "где обычный сервис не поставить.",
                 "",
-                "Содержание каталога, заданий и целей меняется без пересборки "
-                "приложения, поэтому методист может обновлять материал сам — в том "
-                "числе под тематические недели финансовой грамотности.",
+                "Каталог, задания и цели меняются без пересборки приложения: методист "
+                "обновляет материал сам, в том числе под тематические недели.",
                 "",
-                "Дальше — раздел для взрослого как отдельная ценность: родитель "
-                "видит не оценку ребёнка, а разговорные поводы. На этом строится "
-                "подписка, не ограничивая базовую бесплатную часть.",
+                "Раздел взрослого как отдельная ценность: родитель видит не оценку "
+                "ребёнка, а разговорные поводы. На этом строится подписка, не урезая "
+                "бесплатную часть.",
                 "",
-                "Платформа данных переносится на другие просветительские продукты "
-                "департамента: меняется источник событий, конвейер остаётся.",
+                "ПОЧЕМУ ЭТО СИЛЬНАЯ ЗАЯВКА. Каждое число здесь измерено и "
+                "воспроизводится одной командой: 309 автотестов, 82 % покрытия, 58 "
+                "проверок dbt, 14 проверок качества данных. Стек поднимается целиком и "
+                "проверен живьём — склад пишется и читается, API отвечает за 0.5 мс "
+                "при бюджете 50.",
+                "",
+                "И главное: мы показываем не только что ML работает, но и где он "
+                "перестаёт быть полезным, и что тогда происходит. Это то, что "
+                "отличает обоснованное применение от демонстрации ради демонстрации.",
+                "",
+                "Платформа переносится на другие продукты департамента: меняется "
+                "источник событий, конвейер остаётся.",
             ],
-            size_pt=11,
+            size_pt=10,
         )
 
 
@@ -488,17 +582,23 @@ def fill_next_steps(slide) -> None:
 
 
 def build(
-    template: Path, output: Path, numbers: dict[str, str], *, extended: bool = False
+    template: Path,
+    output: Path,
+    numbers: dict[str, str],
+    *,
+    extended: bool = False,
+    team: dict | None = None,
 ) -> Presentation:
     prs = Presentation(str(template))
+    team = team or {}
     keep = MANDATORY + (OPTIONAL if extended else [])
     delete_slides(prs, keep)
 
     slides = list(prs.slides)
-    fill_title(slides[0])
-    fill_about_team(slides[1])
-    fill_members(slides[2])
-    fill_team_story(slides[3])
+    fill_title(slides[0], team)
+    fill_about_team(slides[1], team)
+    fill_members(slides[2], team)
+    fill_team_story(slides[3], team)
     fill_solution_summary(slides[4])
     if extended:
         fill_problem_solution(slides[5])
@@ -530,6 +630,7 @@ def list_todos(path: Path) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--template", type=Path, default=DEFAULT_TEMPLATE)
+    parser.add_argument("--team", type=Path, default=DEFAULT_TEAM_FILE)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--todo", action="store_true", help="only list what is unfilled")
     parser.add_argument(
@@ -558,6 +659,7 @@ def main() -> int:
         args.template,
         args.output,
         extended=args.extended,
+        team=load_team(args.team),
         numbers={
             "tests": args.tests,
             "dbt_tests": args.dbt_tests,
