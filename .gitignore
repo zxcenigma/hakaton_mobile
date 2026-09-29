@@ -1,0 +1,15 @@
+# Backend
+.venv
+**/.env
+
+**/__pycache__/
+.mypy_cache/
+
+backend/monoapi/logs/*
+!backend/monoapi/logs/__init__.py
+
+backend/monoapi/auth/certs/*
+!backend/monoapi/auth/certs/README.md
+
+backend/public/image/*
+backend/monoapi/public/image/*
