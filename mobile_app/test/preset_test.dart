@@ -23,7 +23,7 @@ Finder navigationButton(int number) => find.byWidgetPredicate(
 
 void main() {
   testWidgets('Podium stays fixed while the cat reacts', (tester) async {
-    await tester.pumpWidget(const PetApp());
+    await tester.pumpWidget(const PetApp(home: HomeScreen()));
     final podium = find.byKey(const ValueKey('pet-podium'));
     final position = tester.getRect(podium);
     final boundary = tester.renderObject<RenderRepaintBoundary>(podium);
@@ -47,7 +47,7 @@ void main() {
   testWidgets('Pet reacts to touch and disposes running animations', (
     tester,
   ) async {
-    await tester.pumpWidget(const PetApp());
+    await tester.pumpWidget(const PetApp(home: HomeScreen()));
     await tester.pump(const Duration(seconds: 1));
     expect(tester.binding.hasScheduledFrame, isTrue);
     await tester.tap(find.byType(PetIllustration));
@@ -81,7 +81,7 @@ void main() {
   testWidgets('Four corner buttons open their page and return home', (
     tester,
   ) async {
-    await tester.pumpWidget(const PetApp());
+    await tester.pumpWidget(const PetApp(home: HomeScreen()));
     expect(find.byType(PetIllustration), findsOneWidget);
     expect(find.byType(RoundNavigationButton), findsNWidgets(4));
     expect(find.byType(BottomNavigationBar), findsNothing);
@@ -90,12 +90,12 @@ void main() {
     final positions = [
       for (var n = 1; n <= 4; n++) tester.getCenter(navigationButton(n)),
     ];
-    expect(positions[0].dx, positions[1].dx);
-    expect(positions[2].dx, positions[3].dx);
-    expect(positions[0].dy, positions[2].dy);
-    expect(positions[1].dy, positions[3].dy);
-    expect(positions[0].dy, lessThan(positions[1].dy));
-    expect(positions[0].dx, lessThan(positions[2].dx));
+    expect(positions[0].dx, positions[3].dx);
+    expect(positions[1].dx, positions[2].dx);
+    expect(positions[0].dy, positions[1].dy);
+    expect(positions[3].dy, positions[2].dy);
+    expect(positions[0].dy, lessThan(positions[3].dy));
+    expect(positions[0].dx, lessThan(positions[1].dx));
 
     for (var number = 1; number <= 4; number++) {
       await tester.tap(navigationButton(number));
@@ -103,7 +103,7 @@ void main() {
       expect(find.text(AppSections.title(number)), findsOneWidget);
       expect(
         find.text('${AppSections.title(number)} — здесь появится содержимое'),
-        findsOneWidget,
+        number == 4 ? findsNothing : findsOneWidget,
       );
       final material = tester.widget<Material>(
         find
@@ -168,7 +168,7 @@ void main() {
   testWidgets('Selecting a skin closes the wardrobe and survives navigation', (
     tester,
   ) async {
-    await tester.pumpWidget(const PetApp());
+    await tester.pumpWidget(const PetApp(home: HomeScreen()));
     for (final skin in PetSkin.values) {
       await tester.tap(find.byTooltip('Гардероб'));
       await pumpTransition(tester);
@@ -212,8 +212,8 @@ void main() {
   testWidgets('Deposit validates, animates, and adds each amount only once', (
     tester,
   ) async {
-    await tester.pumpWidget(const PetApp());
-    expect(find.text('Баланс · 0 ₽'), findsOneWidget);
+    await tester.pumpWidget(const PetApp(home: HomeScreen()));
+    expect(find.text('0'), findsOneWidget);
     await tester.ensureVisible(find.byTooltip('Пополнить копилку'));
     await tester.tap(find.byTooltip('Пополнить копилку'));
     await pumpTransition(tester);
@@ -227,13 +227,13 @@ void main() {
     await pumpTransition(tester);
     await tester.pump(const Duration(seconds: 2));
     await tester.pump(const Duration(seconds: 1));
-    expect(find.text('Баланс · 500 ₽'), findsOneWidget);
+    expect(find.text('500'), findsOneWidget);
     expect(find.text('+500 ₽'), findsOneWidget);
     await tester.tap(navigationButton(1));
     await pumpTransition(tester);
     await tester.tap(find.byTooltip('Назад'));
     await pumpTransition(tester);
-    expect(find.text('Баланс · 500 ₽'), findsOneWidget);
+    expect(find.text('500'), findsOneWidget);
     // Dismissing a second deposit must not alter the balance.
     await tester.ensureVisible(find.byTooltip('Пополнить копилку'));
     await tester.tap(find.byTooltip('Пополнить копилку'));
@@ -241,7 +241,7 @@ void main() {
     await pumpTransition(tester);
     await tester.binding.handlePopRoute();
     await pumpTransition(tester);
-    expect(find.text('Баланс · 500 ₽'), findsOneWidget);
+    expect(find.text('500'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -270,13 +270,13 @@ void main() {
       await tester.enterText(find.byType(TextFormField), '750');
       await tester.testTextInput.receiveAction(TextInputAction.done);
       await pumpTransition(tester);
-      expect(find.text('Баланс · 750 ₽'), findsOneWidget);
+      expect(find.text('750'), findsOneWidget);
       expect(find.text('+750 ₽'), findsOneWidget);
       await tester.pump(const Duration(seconds: 5));
       expect(find.text('+750 ₽'), findsOneWidget);
       await tester.pump(const Duration(seconds: 2));
       expect(find.text('+750 ₽'), findsNothing);
-      expect(find.text('Баланс · 750 ₽'), findsOneWidget);
+      expect(find.text('750'), findsOneWidget);
       expect(tester.takeException(), isNull);
       expect(tester.binding.hasScheduledFrame, isFalse);
     },
@@ -287,7 +287,7 @@ void main() {
   ) async {
     final semantics = tester.ensureSemantics();
     try {
-      await tester.pumpWidget(const PetApp());
+      await tester.pumpWidget(const PetApp(home: HomeScreen()));
       for (var n = 1; n <= 4; n++) {
         expect(find.bySemanticsLabel('Открыть страницу $n'), findsOneWidget);
       }

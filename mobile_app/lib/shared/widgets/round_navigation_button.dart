@@ -35,7 +35,7 @@ class RoundNavigationButton extends StatelessWidget {
               1 => Icons.track_changes_rounded,
               2 => Icons.lightbulb_outline_rounded,
               3 => Icons.storefront_rounded,
-              _ => Icons.pets_rounded,
+              _ => Icons.menu_book_rounded,
             }, size: 28),
           ),
         ),

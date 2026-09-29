@@ -203,13 +203,16 @@ class _HomeScreenState extends State<HomeScreen>
           height: rowHeight + lift + buttonSize + captionHeight,
           child: Stack(
             children: [
-              for (final number in [1, 2, 3, 4])
+              for (final (number, isLeft, isBottom) in const [
+                (1, true, false),
+                (2, false, false),
+                (4, true, true),
+                (3, false, true),
+              ])
                 Positioned(
                   left:
-                      middle +
-                      (number < 3 ? -1 : 1) * sideOffset -
-                      buttonSize / 2,
-                  top: lift + (number.isEven ? rowHeight : 0),
+                      middle + (isLeft ? -1 : 1) * sideOffset - buttonSize / 2,
+                  top: lift + (isBottom ? rowHeight : 0),
                   width: buttonSize,
                   child: navigation(number),
                 ),
@@ -287,11 +290,15 @@ class _HomeScreenState extends State<HomeScreen>
               );
               final captionHeight =
                   MediaQuery.textScalerOf(context).scale(11) * 2.4;
+              final headerHeight = math.max(
+                60.0,
+                MediaQuery.textScalerOf(context).scale(18) + 24,
+              );
               final minHeight =
                   buttonSize * 2.5 +
                   captionHeight * 2 +
                   24 +
-                  32 +
+                  headerHeight +
                   120 +
                   MediaQuery.textScalerOf(context).scale(14) * 1.4 +
                   8;
@@ -305,38 +312,90 @@ class _HomeScreenState extends State<HomeScreen>
                         Expanded(
                           child: LayoutBuilder(
                             builder: (context, area) {
-                              final compact = area.maxHeight < 240;
-                              final balanceRow = Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Flexible(
-                                    child: Semantics(
-                                      label: 'Баланс копилки: $_balance рублей',
-                                      liveRegion: true,
-                                      child: ExcludeSemantics(
-                                        child: TweenAnimationBuilder<double>(
-                                          tween: Tween(
-                                            begin: _previousBalance.toDouble(),
-                                            end: _balance.toDouble(),
-                                          ),
-                                          duration: _reduceMotion
-                                              ? Duration.zero
-                                              : const Duration(
-                                                  milliseconds: 900,
-                                                ),
-                                          builder: (_, value, _) => Text(
-                                            'Баланс · ${value.round()} ₽',
-                                            style: TextStyle(
-                                              color: AppPalette.gold,
-                                              fontSize: compact ? 14 : 24,
-                                              fontWeight: FontWeight.w600,
+                              final panelDecoration = BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.055),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.07),
+                                ),
+                              );
+                              final balanceRow = SizedBox(
+                                height: headerHeight,
+                                child: Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: panelDecoration,
+                                        child: Semantics(
+                                          label:
+                                              'Баланс копилки: $_balance рублей',
+                                          liveRegion: true,
+                                          child: ExcludeSemantics(
+                                            child: FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  TweenAnimationBuilder<double>(
+                                                    tween: Tween(
+                                                      begin: _previousBalance
+                                                          .toDouble(),
+                                                      end: _balance.toDouble(),
+                                                    ),
+                                                    duration: _reduceMotion
+                                                        ? Duration.zero
+                                                        : const Duration(
+                                                            milliseconds: 900,
+                                                          ),
+                                                    builder: (_, value, _) =>
+                                                        Text(
+                                                          '${value.round()}',
+                                                          style: const TextStyle(
+                                                            color: AppPalette
+                                                                .ceramic,
+                                                            fontSize: 18,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
+                                                        ),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  const Icon(
+                                                    Icons.toll_rounded,
+                                                    color: AppPalette.gold,
+                                                    size: 18,
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      flex: 3,
+                                      child: Container(
+                                        alignment: Alignment.centerLeft,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                        ),
+                                        decoration: panelDecoration,
+                                        child: const Text(
+                                          'Цель',
+                                          style: TextStyle(
+                                            color: AppPalette.ceramic,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               );
                               final noticeHeight =
                                   MediaQuery.textScalerOf(context).scale(14) *
@@ -403,13 +462,6 @@ class _HomeScreenState extends State<HomeScreen>
                               final naturalSize = math.min(
                                 340.0,
                                 area.maxWidth - 16,
-                              );
-                              final headerHeight = math.max(
-                                48.0,
-                                MediaQuery.textScalerOf(
-                                      context,
-                                    ).scale(compact ? 14 : 24) *
-                                    1.3,
                               );
                               final roomForOverlay =
                                   area.maxHeight >=
