@@ -75,7 +75,7 @@ BEHAVIOUR_LABELS: tuple[str, ...] = ("planner", "spender", "saver", "explorer")
 #: hint — which at that point is «you are doing well, keep going» — is simply
 #: the correct thing to say.
 #:
-#: Reproduce with: `python -m monetka.ml.diagnostics behaviour-horizon`
+#: Reproduce with: `monetka diagnose behaviour-horizon`
 BEHAVIOUR_MAX_PERIOD = 5
 
 

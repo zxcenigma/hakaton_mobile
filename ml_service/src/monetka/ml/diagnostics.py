@@ -24,6 +24,42 @@ from monetka.ml import features as feat
 
 console = Console()
 
+#: A period belongs inside the horizon while its accuracy stays within this
+#: fraction of the best period's. Relative, not absolute: this diagnostic trains
+#: across every period to expose the decay, so its numbers are systematically
+#: lower than the scoped model's and cannot be compared to an absolute gate.
+RELATIVE_HORIZON_FLOOR = 0.90
+
+
+def recommend_horizon(result: pd.DataFrame) -> tuple[float, float, int]:
+    """From a per-period accuracy table, derive the horizon the data supports.
+
+    Returns ``(best_accuracy, floor, recommended_period)``.
+
+    Kept separate from the measurement so it can be checked without a warehouse,
+    and so the rule is one readable expression rather than something inferred
+    from a printed sentence. The printed sentence is what was wrong before: it
+    claimed «the last period holding accuracy ≥ 0.80» while no period reached
+    0.80, because this diagnostic trains across every period on purpose and so
+    scores lower everywhere than the scoped model that ships.
+
+    A period stays inside the horizon while it holds within
+    ``RELATIVE_HORIZON_FLOOR`` of the best period. The horizon is the last such
+    period *before the first one that falls through* — a later period that
+    recovers by chance must not extend it, because the model would still have
+    to serve the failing period in between.
+    """
+    best = float(result["accuracy"].max())
+    floor = RELATIVE_HORIZON_FLOOR * best
+
+    ordered = result.sort_values("period_no")
+    recommended = int(ordered["period_no"].iloc[0])
+    for _, row in ordered.iterrows():
+        if row["accuracy"] < floor:
+            break
+        recommended = int(row["period_no"])
+    return best, floor, recommended
+
 
 def behaviour_horizon() -> pd.DataFrame:
     """Measure how behaviour-segment accuracy decays with the period number.
@@ -46,6 +82,12 @@ def behaviour_horizon() -> pd.DataFrame:
             SELECT profile_pseudo_id, period_no, {columns}
             FROM gold.mart_player_behaviour_features
             WHERE is_training_eligible
+            -- ORDER BY is load-bearing here for the same reason as in
+            -- `features.py`: DuckDB promises no row order without it, a
+            -- parallel scan really does return a different one between runs,
+            -- and that changes the train/test split and every number below.
+            -- Evidence that moves when you re-run it is not evidence.
+            ORDER BY profile_pseudo_id, period_no
             """
         ).fetch_df()
 
@@ -102,10 +144,35 @@ def behaviour_horizon() -> pd.DataFrame:
             f"{row['label_spread']:.3f}",
         )
     console.print(table)
+
+    # The horizon is derived from the measurement, not asserted next to it.
+    #
+    # The obvious rule — «the last period holding accuracy ≥ 0.80» — was what
+    # this printed, and it was wrong: no period reaches 0.80 here, because this
+    # diagnostic trains on the *whole* range on purpose. A model diluted by the
+    # late periods scores lower everywhere than the scoped model that actually
+    # ships, so an absolute threshold compares two different things.
+    #
+    # What the measurement does support is *relative* decay: the point where
+    # accuracy falls away from its own best. That is a statement about the same
+    # model throughout, and it reproduces the configured horizon.
+    best, floor, recommended = recommend_horizon(result)
+
     console.print(
-        f"Chosen horizon: period ≤ [bold]{feat.BEHAVIOUR_MAX_PERIOD}[/] "
-        "— the last period holding accuracy ≥ 0.80. Beyond it the model abstains."
+        f"Best period accuracy [bold]{best:.3f}[/]; periods within "
+        f"{RELATIVE_HORIZON_FLOOR:.0%} of it hold up to period "
+        f"[bold]{recommended}[/] (floor {floor:.3f})."
     )
+    if recommended == feat.BEHAVIOUR_MAX_PERIOD:
+        console.print(
+            f"[green]✓[/] BEHAVIOUR_MAX_PERIOD = {feat.BEHAVIOUR_MAX_PERIOD} matches the data. "
+            "Beyond it the model abstains and the rules answer."
+        )
+    else:
+        console.print(
+            f"[yellow]![/] BEHAVIOUR_MAX_PERIOD = {feat.BEHAVIOUR_MAX_PERIOD}, but this cohort "
+            f"supports {recommended}. Re-check the horizon before shipping the model."
+        )
     return result
 
 

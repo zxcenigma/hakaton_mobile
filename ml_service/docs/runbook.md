@@ -80,8 +80,8 @@ monetka train --model behaviour
 **Воспроизвести утверждение из документации**
 
 ```bash
-python -m monetka.ml.diagnostics behaviour-horizon   # таблица падения точности по периодам
-python -m monetka.ml.diagnostics quest-ranking       # ранговая корреляция рекомендателя
+monetka diagnose behaviour-horizon   # таблица падения точности по периодам
+monetka diagnose quest-ranking       # ранговая корреляция рекомендателя
 ```
 
 **Откатить модель**

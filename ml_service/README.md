@@ -235,8 +235,8 @@ gitleaks по всей истории в CI.
 Каждое нетривиальное утверждение в документации воспроизводится командой:
 
 ```bash
-python -m monetka.ml.diagnostics behaviour-horizon   # таблица падения точности
-python -m monetka.ml.diagnostics quest-ranking       # ранговая корреляция
+monetka diagnose behaviour-horizon   # таблица падения точности
+monetka diagnose quest-ranking       # ранговая корреляция
 monetka quality                                      # минимумы ТЗ §2.6 по данным
 monetka monitor                                      # здоровье модели + сравнение групп
 monetka contracts --check                            # схемы не разошлись с моделями

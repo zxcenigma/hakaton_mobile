@@ -466,5 +466,32 @@ def demo(
     console.print("Start the API with:  [bold]monetka serve[/]  → http://localhost:8000/docs")
 
 
+@app.command()
+def diagnose(
+    what: Annotated[str, typer.Argument(help="behaviour-horizon | quest-ranking | all")] = "all",
+) -> None:
+    """Regenerate the evidence behind the modelling decisions.
+
+    Every non-obvious choice in this platform is defended by a number in the
+    docs, and §3.2 of the specification asks how the correctness of a model is
+    controlled. This is the answer that can be re-run: the horizon diagnostic
+    measures how behaviour-segment accuracy decays period by period, which is
+    the whole reason the model is scoped to `BEHAVIOUR_MAX_PERIOD` and abstains
+    beyond it.
+
+    It lived as `python -m monetka.ml.diagnostics` and so was never run by
+    anyone following the README — a defence nobody can reach defends nothing.
+    """
+    from monetka.ml.diagnostics import behaviour_horizon, quest_ranking
+
+    if what in ("behaviour-horizon", "all"):
+        behaviour_horizon()
+    if what in ("quest-ranking", "all"):
+        quest_ranking()
+    if what not in ("behaviour-horizon", "quest-ranking", "all"):
+        console.print(f"[red]Неизвестная диагностика {what!r}[/]")
+        raise typer.Exit(2)
+
+
 if __name__ == "__main__":
     app()
