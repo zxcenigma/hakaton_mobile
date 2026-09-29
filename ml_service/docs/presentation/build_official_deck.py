@@ -198,6 +198,10 @@ THEME_ACCENT_LIGHT = RGBColor(0xFF, 0xD6, 0xE3)  # accent2 — светло-ро
 #: Below this mean luminance a background counts as dark.
 DARK_BACKGROUND_BELOW = 128.0
 
+#: Кегль, который шаблон даёт текстовым боксам без явной настройки. Нужен,
+#: чтобы проверять вместимость и там, где размер не задаётся.
+INHERITED_SIZE_PT = 14.0
+
 
 def background_luminance(slide) -> float:
     """Mean luminance of what is actually behind the text, 0–255.
@@ -323,8 +327,9 @@ def set_text(shape, lines: list[str] | str, *, size_pt: float | None = None) -> 
     """
     if isinstance(lines, str):
         lines = [lines]
-    if size_pt is not None:
-        check_fits(shape, lines, size_pt)
+    # Проверяем всегда, а не только при явном кегле: именно на унаследованном
+    # 14pt два блока и вылезли за рамку, потому что проверка их не смотрела.
+    check_fits(shape, lines, size_pt if size_pt is not None else INHERITED_SIZE_PT)
     frame = shape.text_frame
     if not frame.paragraphs or not frame.paragraphs[0].runs:
         frame.text = "\n".join(lines)
@@ -459,15 +464,20 @@ def fill_members(slide, team: dict) -> None:
             set_text(shape, "")
             continue
         member = members[index]
-        set_text(
-            shape,
-            [
-                value(member, "role", "роль в команде"),
-                value(member, "messenger", "ник в мессенджере"),
-                value(member, "phone", "номер телефона"),
-                value(member, "affiliation", "место работы/учёбы"),
-            ],
-        )
+        # A line nobody filled in is left off the card rather than printed as a
+        # marker. Four ‹ЗАПОЛНИТЬ› on a submission read as unfinished, while a
+        # card showing name, role and phone reads as complete — and it is not
+        # less true: we simply do not list what we were not told.
+        #
+        # It still has to be findable, so `missing_fields()` reports it from the
+        # source data instead of by scanning the built file.
+        lines = [
+            value(member, "role", "роль в команде"),
+            str(member.get("messenger", "")).strip(),
+            str(member.get("phone", "")).strip(),
+            str(member.get("affiliation", "")).strip(),
+        ]
+        set_text(shape, [line for line in lines if line])
 
 
 def fill_team_story(slide, team: dict) -> None:
@@ -485,6 +495,7 @@ def fill_team_story(slide, team: dict) -> None:
             set_text(
                 shape,
                 [value(team, "history", "как собрались, участвовали ли вместе раньше")],
+                size_pt=12,
             )
 
         elif text.startswith("Что вас вдохновило"):
@@ -492,10 +503,11 @@ def fill_team_story(slide, team: dict) -> None:
                 shape,
                 [
                     "Финансовую грамотность детям обычно объясняют текстом и тестами. "
-                    "Здесь можно показать последствия решения сразу и мягко: котик "
-                    "остался голодным, потому что обязательное не закрыто. Это та "
-                    "задача, где интерфейс учит лучше, чем объяснение.",
+                    "Здесь последствие решения видно сразу и мягко: котик остался "
+                    "голодным, потому что обязательное не закрыто. Это задача, где "
+                    "интерфейс учит лучше объяснения.",
                 ],
+                size_pt=12,
             )
 
         elif text.startswith("Расскажите о самых интересных"):
@@ -506,11 +518,11 @@ def fill_team_story(slide, team: dict) -> None:
                     "что ML здесь уместен. ТЗ его не требует, поэтому мы ограничили "
                     "модели тем, что можно обосновать, и запретили им трогать игровую "
                     "экономику отдельным решением в репозитории.",
-                    "Техническая часть проверялась запуском, а не тестами: 285 тестов "
-                    "проходили, а в контейнере сервис падал — путь к данным вычислялся "
-                    "от исходников, которых в образе нет. Так нашлись четыре ошибки, "
-                    "которые не видны из чекаута.",
+                    "Техническая часть проверялась запуском, а не тестами: тесты "
+                    "проходили, а в контейнере сервис падал — путь к данным считался "
+                    "от исходников, которых в образе нет.",
                 ],
+                size_pt=11,
             )
 
 
@@ -753,16 +765,34 @@ def build(
     return prs
 
 
-def list_todos(path: Path) -> list[str]:
-    """Every box the team still has to fill, by slide."""
-    prs = Presentation(str(path))
+def list_todos(path: Path, team: dict | None = None) -> list[str]:
+    """Everything still unfilled — both what shows a marker and what is omitted.
+
+    Scanning the built deck is not enough any more: a contact nobody gave is
+    left off the card entirely, so it leaves no marker to find. Those come from
+    the source data instead.
+    """
     found: list[str] = []
-    for index, slide in enumerate(prs.slides, 1):
-        for shape in slide.shapes:
-            if shape.has_text_frame and TODO in shape.text_frame.text:
-                for line in shape.text_frame.text.splitlines():
-                    if TODO in line:
-                        found.append(f"слайд {index}: {line.strip()}")
+    if path.exists():
+        prs = Presentation(str(path))
+        for index, slide in enumerate(prs.slides, 1):
+            for shape in slide.shapes:
+                if shape.has_text_frame and TODO in shape.text_frame.text:
+                    for line in shape.text_frame.text.splitlines():
+                        if TODO in line:
+                            found.append(f"слайд {index}: {line.strip()}")
+
+    for member in (team or {}).get("members") or []:
+        name = str((member or {}).get("name", "")).strip()
+        if not name:
+            continue
+        for field, label in (
+            ("messenger", "ник в мессенджере"),
+            ("phone", "номер телефона"),
+            ("affiliation", "место работы/учёбы"),
+        ):
+            if not str(member.get(field, "")).strip():
+                found.append(f"team.yaml: {name} — не указан {label}")
     return found
 
 
@@ -786,7 +816,7 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.todo:
-        for line in list_todos(args.output):
+        for line in list_todos(args.output, load_team(args.team)):
             print(line)
         return 0
 
@@ -809,7 +839,7 @@ def main() -> int:
         },
     )
     print(f"Готово: {args.output}")
-    todos = list_todos(args.output)
+    todos = list_todos(args.output, load_team(args.team))
     print(f"Осталось заполнить команде: {len(todos)} мест")
     for line in todos:
         print("  ", line)
