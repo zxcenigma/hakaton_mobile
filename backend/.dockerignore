@@ -1,0 +1,11 @@
+.venv/
+**/__pycache__/
+**/*.pyc
+.env
+**/.env
+.env.*
+!.env.example
+monoapi/auth/certs/
+monoapi/logs/
+.pytest_cache/
+.coverage

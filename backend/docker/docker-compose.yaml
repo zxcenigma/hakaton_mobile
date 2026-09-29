@@ -1,0 +1,96 @@
+name: hakaton_mobile
+
+services:
+
+  hakaton_mobile_db:
+    image: postgres:17
+    container_name: hakaton_mobile_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DB}
+    env_file:
+      - ../.env
+    volumes:
+      - hakaton_mobile_db:/var/lib/postgresql/data
+      - /etc/localtime:/etc/localtime:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB -h 127.0.0.1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    expose:
+      - "5432"
+    ports:
+      - "127.0.0.1:5432:5432"
+  
+  hakaton_mobile_redis:
+    image: redis:7.4-alpine
+    container_name: hakaton_mobile_redis
+    restart: always
+    volumes:
+      - hakaton_mobile_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    expose:
+      - "6379"
+    ports:
+      - "127.0.0.1:6379:6379"
+
+
+  api:
+    build:
+      context: ../
+      dockerfile: ./docker/Dockerfile.api
+      args:
+        APP_UID: ${APP_UID:-1000}
+        APP_GID: ${APP_GID:-1000}
+    container_name: hakaton_mobile_api
+    restart: always
+    depends_on:
+      hakaton_mobile_db:
+        condition: service_healthy
+      hakaton_mobile_redis:
+        condition: service_healthy
+    env_file:
+       - ../.env
+    environment:
+      PG_HOST: hakaton_mobile_db
+      PG_PORT: "5432"
+      REDIS_HOST: hakaton_mobile_redis
+      REDIS_PORT: "6379"
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: "6767"
+    volumes:
+      - type: bind
+        source: ../monoapi/auth/certs
+        target: /monoapi/monoapi/auth/certs
+        read_only: true
+        bind:
+          create_host_path: false
+    networks:
+      - default
+      - hakaton_mobile_proxy
+    expose:
+      - "6767"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:6767/openapi.json', timeout=3).close()"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    ports:
+      - "127.0.0.1:6767:6767"
+
+networks:
+  hakaton_mobile_proxy:
+    name: hakaton_mobile_proxy
+    external: true
+
+volumes:
+  hakaton_mobile_db:
+  hakaton_mobile_redis:
