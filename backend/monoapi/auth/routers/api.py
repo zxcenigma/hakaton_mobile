@@ -59,12 +59,14 @@ def clear_refresh_cookie(response: Response) -> None:
     response_model=ResponseSignUp,
 )
 async def sign_up(data: SignUpSchema) -> ResponseSignUp:
-    return await SignUpService(request_data=data)()
+    service = SignUpService(request_data=data)
+    return await service()
 
 
 @router.get("/signup_confirm", status_code=status.HTTP_200_OK)
 async def sign_up_confirm(token: str) -> dict[str, str]:
-    await EmailVerificationService(token=token)()
+    service = EmailVerificationService(token=token)
+    await service()
     return {"message": "Электронная почта подтверждена"}
 
 
@@ -78,10 +80,11 @@ async def sign_in(
     response: Response,
     refresh_token: Annotated[str | None, Cookie()] = None,
 ) -> TokenInfoSchema:
-    token_info, refresh_token = await SignInService(
+    service = SignInService(
         request_data=data,
         current_refresh_token=refresh_token,
-    )()
+    )
+    token_info, refresh_token = await service()
     set_refresh_cookie(response, refresh_token)
     return token_info
 
@@ -99,7 +102,8 @@ async def refresh_access_token(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh cookie отсутствует",
         )
-    return await RefreshService(refresh_token=refresh_token)()
+    service = RefreshService(refresh_token=refresh_token)
+    return await service()
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
@@ -107,7 +111,8 @@ async def logout(
     response: Response,
     refresh_token: Annotated[str | None, Cookie()] = None,
 ) -> None:
-    await LogoutService(refresh_token=refresh_token)()
+    service = LogoutService(refresh_token=refresh_token)
+    await service()
     clear_refresh_cookie(response)
 
 
@@ -121,12 +126,13 @@ async def swagger_token(
     response: Response,
     refresh_token: Annotated[str | None, Cookie()] = None,
 ) -> TokenInfoSchema:
-    token_info, refresh_token = await SignInService(
+    service = SignInService(
         request_data=SignInSchema(
             email=form_data.username,
             password=form_data.password,
         ),
         current_refresh_token=refresh_token,
-    )()
+    )
+    token_info, refresh_token = await service()
     set_refresh_cookie(response, refresh_token)
     return token_info

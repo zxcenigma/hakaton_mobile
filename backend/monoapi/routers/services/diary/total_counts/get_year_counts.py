@@ -1,13 +1,20 @@
 from uuid import UUID
 from datetime import date
-from pydantic import Field
+from pydantic import Field, model_validator
 from monoapi.helpers.pydantic import BaseModel
-from monoapi.routers.services.diary._common import DiaryRequest, DiaryService, CalendarDate, get_user, totals, week_bounds
+from monoapi.routers.services.diary._common import DiaryRequest, DiaryService, get_user, totals
 
 
 class RequestGetYearCounts(DiaryRequest):
     user_uuid: UUID
-    year: int = Field(ge=1, le=9998)
+    date_from: date = Field(description="Начало диапазона включительно")
+    date_to: date = Field(description="Конец диапазона, не включается")
+
+    @model_validator(mode="after")
+    def check_range(self):
+        if self.date_from >= self.date_to:
+            raise ValueError("date_from должна быть раньше date_to")
+        return self
 
 
 class ResponseGetYearCounts(BaseModel):
@@ -24,6 +31,7 @@ class GetYearCountsService(DiaryService[ResponseGetYearCounts]):
 
     async def process(self) -> ResponseGetYearCounts:
         user = await get_user(self.async_session, self.user_uuid)
-        start = date(self.request_data.year, 1, 1)
-        end = date(self.request_data.year + 1, 1, 1)
-        return ResponseGetYearCounts(**await totals(self.async_session, user.id, start, end))
+        return ResponseGetYearCounts(**await totals(
+            self.async_session, user.id,
+            self.request_data.date_from, self.request_data.date_to,
+        ))

@@ -18,7 +18,6 @@ class SignUpService(AuthSessionService[ResponseSignUp]):
     request_data: SignUpSchema
 
     async def process(self) -> ResponseSignUp:
-        from monoapi.workers.celery.tasks import send_confirmation_email
 
         existing = await user_repo.get_user_by_email(
             self.async_session, self.request_data.email
@@ -39,11 +38,6 @@ class SignUpService(AuthSessionService[ResponseSignUp]):
         self.async_session.add(user)
         await self.async_session.commit()
 
-        confirmation_token = self.serializer.dumps(user.email)
-        send_confirmation_email.delay(
-            to_email=user.email,
-            token=confirmation_token,
-        )
         return ResponseSignUp()
 
 

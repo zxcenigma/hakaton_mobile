@@ -55,4 +55,10 @@ fi
 
 # Запустить сеть и контейнеры
 docker network inspect hakaton_mobile_proxy >/dev/null 2>&1 || docker network create hakaton_mobile_proxy
-"${compose[@]}" up --build -d "${services[@]}"
+up_options=(--build -d)
+# При обновлении только API не запускаем и не пересоздаём его зависимости.
+# PostgreSQL и Redis должны быть уже запущены.
+if [ "${#services[@]}" -eq 1 ] && [ "${services[0]}" = api ]; then
+    up_options+=(--no-deps)
+fi
+"${compose[@]}" up "${up_options[@]}" "${services[@]}"
