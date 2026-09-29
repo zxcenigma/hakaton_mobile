@@ -71,6 +71,6 @@ bash backend_init.sh down [api | db | redis] # Убить определенны
 * Представленное решение не было доработано до того состояния которое мы себепредставляли
 
 Разработчики:\
-[Fullstack | Backend - разработчик](t.me/BigCityCat)\
+[Fullstack | Backend - разработчик](https://t.me/BigCityCat)\
 \
-[DataEngineer | ML - разработчик](t.me/aleksiy11)
+[DataEngineer | ML - разработчик](https://t.me/aleksiy11)
