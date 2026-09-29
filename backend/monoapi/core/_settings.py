@@ -126,6 +126,7 @@ class Settings(BaseSettings):
     api_protocol: str
     cors_origins: list[str] = [
         "*",
+        "http://91.210.106.86",
     ]
 
     @property

@@ -1,5 +1,4 @@
 from fastapi import HTTPException, status
-from itsdangerous import BadSignature
 from jwt import ExpiredSignatureError, InvalidTokenError
 
 from monoapi.auth.repositories import token_repo, user_repo
@@ -9,7 +8,7 @@ from monoapi.auth.schemas import (
     SignUpSchema,
     TokenInfoSchema,
 )
-from monoapi.auth.utils import decode_jwt, hash_password, verify_password
+from monoapi.auth.utils import decode_jwt
 from monoapi.db.models import UserModel
 from monoapi.routers.services._base import AuthSessionService
 
@@ -18,22 +17,9 @@ class SignUpService(AuthSessionService[ResponseSignUp]):
     request_data: SignUpSchema
 
     async def process(self) -> ResponseSignUp:
-
-        existing = await user_repo.get_user_by_email(
-            self.async_session, self.request_data.email
-        )
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Пользователь с такой почтой уже существует",
-            )
-
         user = UserModel(
-            email=self.request_data.email,
             username=self.request_data.username,
-            password=hash_password(
-                self.request_data.password.get_secret_value()
-            ),
+            age=self.request_data.age
         )
         self.async_session.add(user)
         await self.async_session.commit()
@@ -41,51 +27,25 @@ class SignUpService(AuthSessionService[ResponseSignUp]):
         return ResponseSignUp()
 
 
-class EmailVerificationService(AuthSessionService):
-    token: str
-
-    async def process(self):
-        try:
-            email = self.serializer.loads(self.token, max_age=3600)
-        except BadSignature:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Неверный или просроченный ключ",
-            ) from None
-        await user_repo.update_is_verified(
-            async_session=self.async_session,
-            email=email,
-        )
-
-
 class SignInService(AuthSessionService[tuple[TokenInfoSchema, str]]):
     request_data: SignInSchema
     current_refresh_token: str | None = None
 
     async def process(self) -> tuple[TokenInfoSchema, str]:
-        user = await user_repo.get_user_by_email(
+        user = await user_repo.get_user_by_username(
             self.async_session,
-            self.request_data.email,
+            self.request_data.username,
         )
-        valid_password = user is not None and verify_password(
-            self.request_data.password.get_secret_value(),
-            user.password,
-        )
-        if not valid_password:
+        if user is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Неверный email или пароль",
+                detail="Пользователь не найден",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         if not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Пользователь деактивирован",
-            )
-        if not user.is_superuser:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Недостаточно прав",
             )
         return await token_repo.create_tokens(
             user,
@@ -130,7 +90,6 @@ class RefreshService(AuthSessionService[TokenInfoSchema]):
             user is None
             or user.id != session.user_id
             or not user.is_active
-            or not user.is_superuser
         ):
             raise unauthorized
 

@@ -5,7 +5,6 @@ from fastapi.security import HTTPBearer
 from fastapi.security.http import HTTPAuthorizationCredentials
 
 from monoapi.auth.utils import (
-    encode_jwt,
     decode_jwt
 )
 #--------------------------------------------------------------------------------
@@ -50,22 +49,3 @@ class AccessTokenBearer(HTTPBearer):
 
 
 access_token_bearer = AccessTokenBearer()
-
-
-from typing import ClassVar
-from fastapi.security import OAuth2PasswordBearer as _OAuth2PasswordBearer
-#--------------------------------------------------------------------------
-#                      OAUTH2(NOT ACTUAL IN THIS CASE, JUST FOR INFO)
-#--------------------------------------------------------------------------
-
-
-class OAuth2PasswordBearer(_OAuth2PasswordBearer):
-    _token_url: ClassVar[str] = "/auth/token"  # noqa: S105
-    _scheme_name = "Bearer"
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, tokenUrl=self._token_url, scheme_name=self._scheme_name, **kwargs)
-
-
-oauth2_scheme = OAuth2PasswordBearer()
-

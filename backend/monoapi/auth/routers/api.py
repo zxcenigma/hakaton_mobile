@@ -3,12 +3,11 @@ from typing import Annotated
 from fastapi import (
     APIRouter,
     Cookie,
-    Depends,
+    Form,
     HTTPException,
     Response,
     status,
 )
-from fastapi.security import OAuth2PasswordRequestForm
 
 from monoapi.auth.schemas import (
     ResponseSignUp,
@@ -17,7 +16,6 @@ from monoapi.auth.schemas import (
     TokenInfoSchema,
 )
 from monoapi.auth.services.auth_service import (
-    EmailVerificationService,
     LogoutService,
     RefreshService,
     SignInService,
@@ -61,14 +59,6 @@ def clear_refresh_cookie(response: Response) -> None:
 async def sign_up(data: SignUpSchema) -> ResponseSignUp:
     service = SignUpService(request_data=data)
     return await service()
-
-
-@router.get("/signup_confirm", status_code=status.HTTP_200_OK)
-async def sign_up_confirm(token: str) -> dict[str, str]:
-    service = EmailVerificationService(token=token)
-    await service()
-    return {"message": "Электронная почта подтверждена"}
-
 
 @router.post(
     "/signin",
@@ -122,15 +112,12 @@ async def logout(
     response_model=TokenInfoSchema,
 )
 async def swagger_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    username: Annotated[str, Form()],
     response: Response,
     refresh_token: Annotated[str | None, Cookie()] = None,
 ) -> TokenInfoSchema:
     service = SignInService(
-        request_data=SignInSchema(
-            email=form_data.username,
-            password=form_data.password,
-        ),
+        request_data=SignInSchema(username=username),
         current_refresh_token=refresh_token,
     )
     token_info, refresh_token = await service()

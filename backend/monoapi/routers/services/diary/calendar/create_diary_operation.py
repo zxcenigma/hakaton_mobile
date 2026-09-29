@@ -37,11 +37,21 @@ class ResponseCreateDiaryOperation(BaseModel):
     updated_at: datetime
 
 
-def operation_response(operation: DiaryModel, target_uuid: UUID | None) -> dict:
-    return dict(uuid=operation.uuid, name=operation.name, operation_date=operation.operation_date,
-                operation_type=operation.operation_type, amount=operation.amount,
-                category=operation.category, target_uuid=target_uuid,
-                created_at=operation.created_at, updated_at=operation.updated_at)
+def operation_response(
+        operation: DiaryModel, 
+        target_uuid: UUID | None) -> dict:
+    
+    return dict(
+        uuid=operation.uuid, 
+        name=operation.name, 
+        operation_date=operation.operation_date,
+        operation_type=operation.operation_type, 
+        amount=operation.amount,
+        category=operation.category, 
+        target_uuid=target_uuid,
+        created_at=operation.created_at, 
+        updated_at=operation.updated_at
+    )
 
 
 class CreateDiaryOperationService(DiaryService[ResponseCreateDiaryOperation]):

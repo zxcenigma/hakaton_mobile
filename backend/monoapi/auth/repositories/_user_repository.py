@@ -40,7 +40,15 @@ class UserRepository:
         result = await async_session.execute(query)
         return result.scalar_one_or_none()
 
-
+    async def get_user_by_username(
+        self,
+        async_session: AsyncSession,
+        username: str,
+    ) -> UserModel | None:
+        query = select(UserModel).where(UserModel.username == username)
+        result = await async_session.execute(query)
+        return result.scalar_one_or_none()
+    
     async def get_current_user():
         pass
 

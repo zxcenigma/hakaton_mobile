@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import EmailStr, Field, UUID4
+from pydantic import Field, UUID4
 
 from monoapi.helpers.pydantic import BaseModel
 from monoapi.routers.services._base import BaseUserAuthenticatedService
@@ -12,7 +12,7 @@ class GetUserMeResponse(BaseModel):
         min_length=1,
         max_length=24,
     )
-    email: EmailStr
+    age: int
     is_active: bool
     is_superuser: bool
     created_at: datetime

@@ -116,7 +116,6 @@ class TokenRepository:
         return {
             "sub": str(user.uuid),
             "username": user.username,
-            "email": str(user.email),
         }
 
 

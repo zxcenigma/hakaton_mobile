@@ -1,4 +1,4 @@
-from pydantic import EmailStr, ConfigDict, Field, SecretStr
+from pydantic import ConfigDict, Field
 
 from monoapi.helpers.pydantic import BaseModel
 
@@ -11,16 +11,13 @@ from monoapi.helpers.pydantic import BaseModel
 
 # TODO: Email 2FA
 class SignInSchema(BaseModel):
-    email: EmailStr = Field(..., description="Email field")
-    password: SecretStr = Field(min_length=8, max_length=64)
+    username: str = Field(..., description="Username field")
     # code:  str      = Field(..., description="Code from Email Field", min_length=4, max_length=6)
 
     model_config = ConfigDict(strict=True,
                               json_schema_extra={
                                     "example": {
-                                        "email": "user@example.ru",
-                                        "password": "password"
-                                        # "code": "email_code",
+                                        "username": "username",                                        # "code": "email_code",
                                     },
                                 }
 
@@ -28,16 +25,13 @@ class SignInSchema(BaseModel):
 
 
 class SignUpSchema(BaseModel):
-    email: EmailStr = Field(..., description="Email Field")
     username: str = Field(..., description="Username Field", min_length=4, max_length=24)
-    password: SecretStr = Field(min_length=8, max_length=64)
-
+    age: int = Field(..., description="Age Field")
     model_config = ConfigDict(strict=True,
                               json_schema_extra={
                                     "example": {
-                                        "email": "user@example.ru",
                                         "username": "username",
-                                        "password": "password"
+                                        "age": 11,
                                     },
                                 }
                             )

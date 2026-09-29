@@ -28,8 +28,14 @@ router = APIRouter(
     prefix="/diary_counts",
     tags=["diary_counts"],
     responses={
-        404: {"model": CountsErrorResponse, "description": "Пользователь не найден"},
-        422: {"model": CountsErrorResponse, "description": "Некорректный диапазон дат"},
+        404: {
+            "model": CountsErrorResponse, 
+            "description": "Пользователь не найден"
+        },
+        422: {
+            "model": CountsErrorResponse, 
+            "description": "Некорректный диапазон дат"
+        },
     },
 )
 
@@ -40,6 +46,7 @@ router = APIRouter(
 )
 async def counts_week(
     request: Annotated[RequestGetWeekCounts, Query()]) -> ResponseGetWeekCounts:
+    
     service = GetWeekCountsService(
         user_uuid=request.user_uuid, 
         request_data=request
@@ -53,6 +60,7 @@ async def counts_week(
 )
 async def counts_month(
     request: Annotated[RequestGetMonthCounts, Query()]) -> ResponseGetMonthCounts:
+    
     service = GetMonthCountsService(
         user_uuid=request.user_uuid, 
         request_data=request
@@ -66,6 +74,7 @@ async def counts_month(
 )
 async def counts_year(
     request: Annotated[RequestGetYearCounts, Query()]) -> ResponseGetYearCounts:
+    
     service = GetYearCountsService(
         user_uuid=request.user_uuid, 
         request_data=request

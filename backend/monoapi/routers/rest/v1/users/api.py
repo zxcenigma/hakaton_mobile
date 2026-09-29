@@ -2,7 +2,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, status, Depends
 
-from monoapi.auth.security import oauth2_scheme
+from fastapi.security import HTTPAuthorizationCredentials
+
+from monoapi.auth.security import access_token_bearer
 from monoapi.routers.exceptions import UnauthorizedResponse
 
 
@@ -25,7 +27,7 @@ router = APIRouter(prefix="/users", tags=["users"])
     name="user_me",
 )
 async def get_me(
-    token: Annotated[str, Depends(oauth2_scheme)],
+    token: Annotated[HTTPAuthorizationCredentials, Depends(access_token_bearer)],
 ) -> GetUserMeResponse:
-    service: GetUserMeService = GetUserMeService(token=token)
+    service: GetUserMeService = GetUserMeService(token=token.credentials)
     return await service()

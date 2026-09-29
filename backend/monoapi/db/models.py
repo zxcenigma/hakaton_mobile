@@ -34,10 +34,8 @@ id, uuid, created_at, updated_at вшиты в Base.
 class UserModel(Base):
     __tablename__ = "users"
     
-    email: Mapped[EmailStr] = mapped_column(String(100), nullable=False, unique=True)
     username: Mapped[str] = mapped_column(String(24), nullable=False)
     age: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    password: Mapped[str] = mapped_column(String(512), nullable=False)
     balance: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     targets: Mapped[list["TargetModel"]] = relationship(

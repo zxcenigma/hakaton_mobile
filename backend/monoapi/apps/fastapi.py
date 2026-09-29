@@ -4,7 +4,7 @@ import logging
 
 from sqlalchemy import text
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_pagination import add_pagination
@@ -16,6 +16,16 @@ from monoapi.db import async_session_manager, redis_session_manager
 from monoapi.helpers.logger import get_logger
 
 app_logger = get_logger(__name__)
+
+
+async def log_requests_middleware(request: Request, call_next: Callable):
+    app_logger.info(
+        f"{request.client.host if request.client else 'unknown'} "
+        f"{request.method} {request.url.path} "
+        f"UA={request.headers.get('user-agent')}"
+    )
+    return await call_next(request)
+
 
 class MonoAPI(FastAPI):
     """
@@ -61,6 +71,9 @@ class MonoAPI(FastAPI):
             allow_methods=["*"],
             allow_headers=["*"],
         )
+        # Регистрируем middleware
+        self.middleware("http")(log_requests_middleware)
+
 
     def _setup_routers(self) -> None:
         from monoapi.auth import auth_router
