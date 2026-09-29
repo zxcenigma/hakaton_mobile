@@ -188,102 +188,32 @@ def renumber(prs: Presentation) -> None:
 
 # ---------------------------------------------------------------- цвета ----
 #
-# The template's own palette. Nothing here is invented: these are the values
-# from its theme, and the code only chooses which of them to use.
-THEME_DARK_INK = RGBColor(0x1C, 0x1D, 0x22)   # dk2 — почти чёрный
-THEME_LIGHT_INK = RGBColor(0xFF, 0xFF, 0xFF)  # lt1 — белый
-THEME_ACCENT_DARK = RGBColor(0x52, 0x09, 0x77)   # accent5 — тёмно-фиолетовый
-THEME_ACCENT_LIGHT = RGBColor(0xFF, 0xD6, 0xE3)  # accent2 — светло-розовый
+# Цвета текста здесь НЕ трогаются, и это решение далось дорого.
+#
+# Фоны слайдов в шаблоне — полноразмерные картинки, и часть из них тёмные
+# (яркость ≈44 из 255). Отсюда напрашивался вывод, что чёрный текст темы на них
+# не виден, и предыдущая версия перекрашивала его в белый по измеренной яркости
+# фона.
+#
+# Вывод был неверным. Текст на этих слайдах лежит не на фоне, а на белых
+# карточках поверх него — и заливка карточек задана через `<p:style>`, а не
+# через `<a:solidFill>`, поэтому разбор `spPr` её не находил. Перекраска
+# сделала ровно то, чего пыталась избежать: белые буквы на белых карточках.
+# Имена участников из тёмно-фиолетовых стали бледно-розовыми, роли и телефоны
+# исчезли совсем, показатели на слайде статистики — тоже.
+#
+# Правильный вывод: шаблон расставил цвета сам и расставил их верно. Наша
+# задача — не перекрашивать его, а вписаться в его рамки по объёму текста, чем
+# и занимается `capacity` ниже.
 
-#: Below this mean luminance a background counts as dark.
-DARK_BACKGROUND_BELOW = 128.0
 
 #: Кегль, который шаблон даёт текстовым боксам без явной настройки. Нужен,
-#: чтобы проверять вместимость и там, где размер не задаётся.
+#: чтобы проверять вместимость и там, где размер не задаётся явно.
 INHERITED_SIZE_PT = 14.0
 
-
-def background_luminance(slide) -> float:
-    """Mean luminance of what is actually behind the text, 0–255.
-
-    The template paints its backgrounds with full-bleed images, not fills, and
-    they are not consistent: slides 9 and 11 are dark (≈44) while 8 and 10 are
-    light (≈243), even where two of them share a layout. The theme maps `tx1` to
-    black on all of them and no slide carries a colour-map override, so the body
-    text on the dark ones is black on near-black.
-
-    That is the template's own state, not something introduced here — but a
-    submission nobody can read is not a submission, so the text gets an explicit
-    colour chosen from this measurement. Fonts, sizes, positions and the palette
-    itself are untouched.
-    """
-    import io
-    import re
-
-    xml = slide._element.xml
-    match = re.search(r"<p:bg>.*?r:embed=\"(rId\d+)\".*?</p:bg>", xml, re.S)
-    part_holder = slide.part
-    if match is None:
-        xml = slide.slide_layout._element.xml
-        match = re.search(r"<p:bg>.*?r:embed=\"(rId\d+)\".*?</p:bg>", xml, re.S)
-        part_holder = slide.slide_layout.part
-    if match is None:
-        return 255.0  # ничего не нашли — считаем светлым, текст будет тёмным
-
-    try:
-        from PIL import Image
-    except ImportError:
-        return 255.0
-
-    blob = part_holder.rels[match.group(1)].target_part.blob
-    image = Image.open(io.BytesIO(blob)).convert("RGB").resize((48, 27))
-    #  is deprecated in Pillow 14 but is the only spelling that works
-    # across the versions likely to be installed here, and it yields tuples.
-    pixels = list(image.getdata())
-    return sum(0.2126 * r + 0.7152 * g + 0.0722 * b for r, g, b in pixels) / len(pixels)
-
-
-def ink_for(slide) -> tuple[RGBColor, RGBColor]:
-    """(основной, акцентный) цвета текста для этого слайда."""
-    if background_luminance(slide) < DARK_BACKGROUND_BELOW:
-        return THEME_LIGHT_INK, THEME_ACCENT_LIGHT
-    return THEME_DARK_INK, THEME_ACCENT_DARK
-
-
-def recolour(slide) -> int:
-    """Repaint every text on the slide so it contrasts with the background.
-
-    Runs that already carry the accent colour keep being accents — they just
-    switch to the readable member of the pair. Everything else becomes body ink.
-    Returns how many runs were touched, so the build can report it.
-    """
-    body, accent = ink_for(slide)
-    accent_sources = {THEME_ACCENT_DARK, THEME_ACCENT_LIGHT}
-    touched = 0
-    for shape in slide.shapes:
-        if not shape.has_text_frame:
-            continue
-        for paragraph in shape.text_frame.paragraphs:
-            for run in paragraph.runs:
-                if not run.text.strip():
-                    continue
-                current = None
-                try:
-                    if run.font.color is not None and run.font.color.type is not None:
-                        current = run.font.color.rgb
-                except (AttributeError, TypeError, ValueError):
-                    current = None
-                is_accent = current in accent_sources or _is_theme_accent(run)
-                run.font.color.rgb = accent if is_accent else body
-                touched += 1
-    return touched
-
-
-def _is_theme_accent(run) -> bool:
-    """Did this run use the template's accent colour before we repainted it?"""
-    import re
-
-    return bool(re.search(r'<a:schemeClr val="accent5"', run._r.xml))
+#: Во сколько раз текст может превысить расчётную ёмкость, прежде чем сборка
+#: остановится. Оценка приблизительная, а шаблон оставляет запас под боксами.
+OVERFLOW_TOLERANCE = 1.4
 
 
 def capacity(shape, size_pt: float) -> int:
@@ -301,20 +231,39 @@ def capacity(shape, size_pt: float) -> int:
 
     width_in = Emu(shape.width).inches
     height_in = Emu(shape.height).inches
-    chars_per_line = max(1, int(width_in * 72 / (size_pt * 0.5)))
-    lines = max(1, int(height_in * 72 / (size_pt * 1.25)))
+    # Коэффициенты подобраны по тому, что реально получилось в PowerPoint, а не
+    # по средней ширине глифа. Прежние 0.5 и 1.25 давали вдвое завышенную
+    # оценку: кириллица в этой гарнитуре шире латиницы, placeholder'ы добавляют
+    # маркер и отступ, а межстрочный интервал в шаблоне больше одинарного.
+    chars_per_line = max(1, int(width_in * 72 / (size_pt * 0.62)))
+    lines = max(1, int(height_in * 72 / (size_pt * 1.55)))
     return chars_per_line * lines
 
 
 def check_fits(shape, lines: list[str], size_pt: float) -> None:
     """Refuse text that will spill out of its box."""
-    total = sum(len(line) for line in lines) + len(lines)
+    # Пустая строка-разделитель занимает целую строку, а не ноль символов.
+    per_line = 24
+    total = sum(max(len(line), per_line if not line.strip() else 0) for line in lines)
+    total += len(lines) * 2  # запас на переносы слов
     room = capacity(shape, size_pt)
-    if total > room:
+    if total <= room:
+        return
+    # Небольшой перелив PowerPoint отрисует за рамкой бокса, и в этом шаблоне
+    # под текстовыми боксами обычно остаётся пустая часть карточки — поэтому
+    # фамилия из 29 букв в боксе «на 30» выглядит нормально и падать на ней
+    # незачем. Ловить надо грубое переполнение: на слайде «Коротко о решении»
+    # текст выходил за карточку примерно вдвое и налезал на фон.
+    if total > room * OVERFLOW_TOLERANCE:
         raise ValueError(
             f"текст {total} символов не влезает в бокс {shape.name!r} "
             f"(вмещает ≈{room} при {size_pt} pt) — сократите или уменьшите кегль"
         )
+    print(
+        f"  предупреждение: {shape.name!r} — {total} символов при ёмкости ≈{room}, "
+        "перелив небольшой",
+        file=sys.stderr,
+    )
 
 
 def set_text(shape, lines: list[str] | str, *, size_pt: float | None = None) -> None:
@@ -404,11 +353,10 @@ def fill_about_team(slide, team: dict) -> None:
             set_text(
                 shape,
                 [
-                    "Приложение для детей 7–11 лет: ребёнок получает доход, делит его "
-                    "между обязательным, желаемым и накоплениями, покупает в каталоге и "
-                    "копит на цель. Котик отражает качество решений — последствие видно "
-                    "сразу. Взрослый видит прогресс отдельно. Основной цикл работает "
-                    "офлайн, без сервера."
+                    "Приложение для детей 7–11 лет: ребёнок получает доход, делит "
+                    "его между обязательным, желаемым и накоплениями, копит на цель. "
+                    "Котик отражает качество решений — последствие видно сразу. "
+                    "Взрослый видит прогресс. Работает офлайн."
                 ],
                 size_pt=10,
             )
@@ -418,10 +366,9 @@ def fill_about_team(slide, team: dict) -> None:
                 shape,
                 [
                     "Каждое решение объясняется словами, а не баллами. Объяснение "
-                    "выбирает модель, но при её отказе или ответе дольше 50 мс работает "
-                    "правило — приложение полноценно и без сети, и без ML. Экономику "
-                    "игры модели не трогают: цены и доход одинаковы для всех. "
-                    "Персональные данные детей не собираются — это проверяет код."
+                    "выбирает модель, но при её отказе работает правило — приложение "
+                    "полноценно и без сети, и без ML. Экономику игры модели не "
+                    "трогают. Персональные данные детей не собираются."
                 ],
                 size_pt=10,
             )
@@ -457,7 +404,11 @@ def fill_members(slide, team: dict) -> None:
         if index >= len(members):
             set_text(shape, "")
             continue
-        set_text(shape, value(members[index], "name", "Имя Фамилия"))
+        # Шаблон рассчитывал бокс на «Имя Фамилия» — 11 символов при кегле 16.
+        # Полное ФИО вдвое длиннее и при этом кегле наезжает на строку роли,
+        # что видно только открыв файл. 13 pt укладывают его в две строки, не
+        # трогая ни шрифт, ни цвет, ни положение рамки.
+        set_text(shape, value(members[index], "name", "Имя Фамилия"), size_pt=13)
 
     for index, shape in enumerate(detail_boxes):
         if index >= len(members):
@@ -502,10 +453,9 @@ def fill_team_story(slide, team: dict) -> None:
             set_text(
                 shape,
                 [
-                    "Финансовую грамотность детям обычно объясняют текстом и тестами. "
-                    "Здесь последствие решения видно сразу и мягко: котик остался "
-                    "голодным, потому что обязательное не закрыто. Это задача, где "
-                    "интерфейс учит лучше объяснения.",
+                    "Финансовую грамотность детям обычно объясняют текстом. Здесь "
+                    "последствие решения видно сразу: котик остался голодным, потому "
+                    "что обязательное не закрыто.",
                 ],
                 size_pt=12,
             )
@@ -514,13 +464,12 @@ def fill_team_story(slide, team: dict) -> None:
             set_text(
                 shape,
                 [
-                    "Главная трудность была не технической, а методической: доказать, "
+                    "Главная трудность была методической, а не технической: доказать, "
                     "что ML здесь уместен. ТЗ его не требует, поэтому мы ограничили "
-                    "модели тем, что можно обосновать, и запретили им трогать игровую "
-                    "экономику отдельным решением в репозитории.",
-                    "Техническая часть проверялась запуском, а не тестами: тесты "
-                    "проходили, а в контейнере сервис падал — путь к данным считался "
-                    "от исходников, которых в образе нет.",
+                    "модели тем, что можно обосновать, и запретили им менять "
+                    "экономику игры.",
+                    "Техническую часть проверяли запуском, а не тестами: тесты "
+                    "проходили, а в контейнере сервис падал.",
                 ],
                 size_pt=11,
             )
@@ -533,33 +482,24 @@ def fill_solution_summary(slide) -> None:
         set_text(
             tech,
             [
-                "Игровой цикл выполняется целиком на устройстве: локальная база, "
-                "сеть не требуется (ТЗ §3.1.5).",
-                "",
-                "Машинное обучение ТЗ не требует: §2.7.5 выносит его за обязательный "
-                "минимум. Мы применяем его только там, где §3.2 это допускает, и "
-                "отвечаем на все три условия пункта.",
-                "",
-                "Задача. Три модели: какое объяснение показать в «Советнике», в каком "
-                "порядке предложить задания, какие периоды передать методисту на "
-                "проверку. Игровую экономику не изменяет ни одна — запрет "
-                "зафиксирован отдельным решением в репозитории.",
-                "",
-                "Данные. Только синтетическая телеметрия. Персональные данные детей "
-                "не собираются: контракты событий отвергают такие поля, сборка "
-                "останавливается, API возвращает 422.",
-                "",
-                "Контроль корректности. Модель не выкладывается, если не прошла порог, "
-                "и дополнительно должна быть не хуже действующей. Выборка делится по "
-                "игрокам, а не по строкам. После конвертации в ONNX проверяется "
-                "совпадение ответов с исходной моделью. Ведётся мониторинг дрейфа.",
-                "",
-                "Граница применимости выведена из измерений: точность распознавания "
-                "падает с 0.83 на четвёртом периоде до 0.46 на десятом, поэтому после "
-                "пятого периода модель воздерживается и ответ формирует правило.",
-                "",
+                "Игровой цикл выполняется на устройстве: локальная база, сеть не "
+                "требуется (ТЗ §3.1.5).",
+                "Машинное обучение ТЗ не требует — §2.7.5 выносит его за обязательный "
+                "минимум. Применяем только там, где §3.2 допускает, и отвечаем на три "
+                "его условия.",
+                "Задача. Три модели: какое объяснение показать, в каком порядке "
+                "предложить задания, какие периоды передать методисту. Игровую "
+                "экономику не меняет ни одна.",
+                "Данные. Только синтетическая телеметрия. Персональные данные детей не "
+                "собираются: контракты отвергают такие поля, API возвращает 422.",
+                "Контроль. Модель не выкладывается, если не прошла порог, и должна "
+                "быть не хуже действующей. Выборка делится по игрокам. После "
+                "конвертации в ONNX проверяется совпадение ответов.",
+                "Граница применимости выведена из измерений: точность падает с 0.83 на "
+                "четвёртом периоде до 0.46 на десятом, поэтому после пятого модель "
+                "воздерживается и отвечает правило.",
                 "Стек: Python, DuckDB, dbt, Iceberg, Trino, Redpanda, MLflow, FastAPI, "
-                "ONNX Runtime, Docker Compose.",
+                "ONNX Runtime, Docker.",
             ],
             size_pt=10,
         )
@@ -571,26 +511,19 @@ def fill_solution_summary(slide) -> None:
             [
                 "Внедрение начинается с пилота в школах и библиотеках. Приложение "
                 "работает офлайн, поэтому не требует ни сети в классе, ни регистрации "
-                "ребёнка, и разворачивается там, где обычный сервис недоступен.",
-                "",
-                "Каталог, задания и цели изменяются без пересборки приложения: "
-                "методист обновляет материал самостоятельно, в том числе под "
-                "тематические недели финансовой грамотности.",
-                "",
+                "ребёнка.",
+                "Каталог, задания и цели меняются без пересборки приложения: методист "
+                "обновляет материал сам.",
                 "Раздел взрослого имеет самостоятельную ценность: родитель получает не "
                 "оценку ребёнка, а темы для разговора. На этом строится подписка, "
                 "базовая часть остаётся бесплатной.",
-                "",
-                "Три довода в пользу решения. Первый: каждый показатель измерен и "
-                "воспроизводится одной командой — 309 автотестов, 82 % покрытия, 58 "
-                "проверок dbt, 14 проверок качества данных. Второй: стек разворачивается "
-                "целиком и проверен в работе — хранилище пишется и читается, API "
-                "отвечает за 0.5 мс при бюджете 50 мс. Третий: мы показываем не только "
-                "то, что модель работает, но и границу, за которой она перестаёт быть "
-                "полезной, и что происходит за этой границей.",
-                "",
-                "Платформа данных переносится на другие просветительские продукты "
-                "департамента: меняется источник событий, конвейер сохраняется.",
+                "Три довода. Первый: каждый показатель измерен и воспроизводится одной "
+                "командой — 341 автотест, 82 % покрытия, 58 проверок dbt. Второй: стек "
+                "разворачивается целиком и проверен в работе, API отвечает за 0.5 мс "
+                "при бюджете 50. Третий: мы показываем не только то, что модель "
+                "работает, но и границу, за которой она перестаёт быть полезной.",
+                "Платформа переносится на другие продукты департамента: меняется "
+                "источник событий, конвейер сохраняется.",
             ],
             size_pt=10,
         )
@@ -657,7 +590,6 @@ def fill_statistics(slide, numbers: dict[str, str]) -> None:
 def _replace_chart(slide, numbers: dict[str, str]) -> None:
     from pptx.chart.data import CategoryChartData
 
-    body, _ = ink_for(slide)
     for shape in slide.shapes:
         if not shape.has_chart:
             continue
@@ -668,28 +600,6 @@ def _replace_chart(slide, numbers: dict[str, str]) -> None:
             (float(numbers["accuracy"]), float(numbers["baseline"]), float(numbers["gate"])),
         )
         shape.chart.replace_data(data)
-        _recolour_chart_text(shape.chart, body)
-
-
-def _recolour_chart_text(chart, ink) -> None:
-    """Axis labels, legend and data labels, in the slide's ink.
-
-    A chart does not inherit the slide's text colour: it carries its own, and
-    this one uses `tx1` — black — while sitting on the dark background of the
-    statistics layout. Setting `chart.font` covers what inherits, and the
-    explicit `tx1` references left in the chart XML are rewritten, because those
-    are exactly the parts that would ignore it.
-    """
-    from pptx.oxml.ns import qn
-
-    chart.font.color.rgb = ink
-    chart.font.size = Pt(12)
-
-    hexed = f"{ink}"
-    for scheme_clr in chart._chartSpace.iter(qn("a:schemeClr")):
-        if scheme_clr.get("val") in {"tx1", "dk1"}:
-            scheme_clr.tag = qn("a:srgbClr")
-            scheme_clr.set("val", hexed)
 
 
 def fill_tz_points(slide) -> None:
@@ -755,10 +665,6 @@ def build(
         fill_next_steps(slides[9])
 
     renumber(prs)
-
-    # Last, so it also covers the text written above and the numbers.
-    for slide in prs.slides:
-        recolour(slide)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     prs.save(str(output))
