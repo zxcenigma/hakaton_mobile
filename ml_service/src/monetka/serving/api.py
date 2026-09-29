@@ -23,6 +23,7 @@ failure — that is precisely the behaviour required on a device with no model.
 
 from __future__ import annotations
 
+import json
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -218,6 +219,56 @@ class AdultProgressResponse(BaseModel):
 
 
 # ------------------------------------------------------------- endpoints --
+
+
+#: A batch larger than this is refused rather than queued. The endpoint holds a
+#: single DuckDB writer for the duration of the insert, so an unbounded batch
+#: would block every other write behind it.
+MAX_EVENTS_PER_BATCH = 5_000
+
+INGEST_EVENTS = Counter(
+    "monetka_ingest_events_total",
+    "События, принятые по HTTP",
+    ["outcome"],
+)
+
+
+class IngestRequest(BaseModel):
+    """A batch of events from the backend.
+
+    The shape is the event envelope from `contracts/jsonschema/`, not a new one:
+    the app, the Kafka topic and this endpoint all speak the same contract, so
+    there is nothing to keep in sync.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    events: list[dict[str, Any]] = Field(
+        ...,
+        min_length=1,
+        max_length=MAX_EVENTS_PER_BATCH,
+        description="Конверты событий. Дубликаты по event_id отбрасываются.",
+    )
+    source: str = Field(
+        default="backend",
+        max_length=32,
+        pattern=r"^[a-z0-9_-]+$",
+        description="Кто прислал: попадает в bronze и видно в аудите.",
+    )
+
+
+class IngestRejection(BaseModel):
+    index: int = Field(..., description="Позиция события в присланном массиве.")
+    reason: str = Field(..., description="Почему отвергнуто.")
+
+
+class IngestResponse(BaseModel):
+    received: int
+    accepted: int = Field(..., description="Записано в bronze впервые.")
+    duplicates: int = Field(..., description="Уже были — отброшены по event_id.")
+    rejected: int
+    rejections: list[IngestRejection] = Field(default_factory=list, max_length=50)
+    batch_id: str
 
 
 @app.get("/health", response_model=HealthResponse, tags=["ops"])
@@ -471,3 +522,77 @@ def content_manifest() -> dict[str, Any]:
         "models": models,
         "platform_version": __version__,
     }
+
+
+@app.post("/v1/events:batch", response_model=IngestResponse, tags=["ingestion"])
+def ingest_events(request: IngestRequest) -> IngestResponse:
+    """Принять пачку событий от бэкенда.
+
+    Второй вход в bronze рядом с Kafka, с теми же гарантиями:
+
+    * **Идемпотентность.** Повтор отбрасывается по `event_id`, поэтому
+      приложение может слать одно и то же сколько угодно раз после потери
+      связи. Для офлайн-first это обязательное свойство, а не удобство.
+    * **Ничего не теряется молча.** Событие, не прошедшее контракт, уходит в
+      `bronze.rejected_events` с причиной и остаётся доступным для разбора.
+      Ответ называет позицию в присланном массиве, чтобы отправитель понял,
+      какое именно.
+    * **Тот же контракт.** Валидация — та самая функция, что и в потоковом
+      консьюмере. Поля, похожие на персональные данные, отвергаются здесь так
+      же, как и там (ТЗ §3.5).
+
+    Приём **не** подтверждает, что событие корректно по смыслу — только что оно
+    соответствует конверту. Смысловые проверки живут в `monetka quality` и
+    считаются по всему слою, а не по одному сообщению.
+    """
+    import uuid
+    from datetime import UTC, datetime
+
+    from monetka.ingestion.stream_consumer import _flush, _parse
+
+    batch_id = f"http-{uuid.uuid4().hex[:12]}"
+    now = datetime.now(UTC)
+
+    rows: list[tuple] = []
+    dead_letters: list[tuple] = []
+    rejections: list[IngestRejection] = []
+
+    for index, event in enumerate(request.events):
+        parsed = _parse(json.dumps(event, ensure_ascii=False), now, request.source, batch_id)
+        if isinstance(parsed, str):
+            dead_letters.append(
+                (now, parsed, json.dumps(event, ensure_ascii=False), request.source, batch_id)
+            )
+            if len(rejections) < 50:
+                rejections.append(IngestRejection(index=index, reason=parsed))
+        else:
+            rows.append(parsed)
+
+    try:
+        inserted = _flush(rows, dead_letters, batch_id)
+    except Exception as exc:  # pragma: no cover - warehouse contention
+        log.error("ingest_write_failed", error=str(exc)[:300], batch_id=batch_id)
+        raise HTTPException(status_code=503, detail="склад недоступен, повторите позже") from exc
+
+    duplicates = len(rows) - inserted
+    INGEST_EVENTS.labels(outcome="accepted").inc(inserted)
+    INGEST_EVENTS.labels(outcome="duplicate").inc(duplicates)
+    INGEST_EVENTS.labels(outcome="rejected").inc(len(dead_letters))
+    log.info(
+        "ingest_batch",
+        batch_id=batch_id,
+        received=len(request.events),
+        accepted=inserted,
+        duplicates=duplicates,
+        rejected=len(dead_letters),
+        source=request.source,
+    )
+
+    return IngestResponse(
+        received=len(request.events),
+        accepted=inserted,
+        duplicates=duplicates,
+        rejected=len(dead_letters),
+        rejections=rejections,
+        batch_id=batch_id,
+    )

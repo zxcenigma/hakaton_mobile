@@ -181,8 +181,15 @@ def run() -> None:  # pragma: no cover - exercised by the compose integration te
         log.info("consumer_stopped")
 
 
-def _parse(raw: str, now: datetime) -> tuple | str:
-    """Validate one message. Returns the bronze row, or a rejection reason."""
+def _parse(raw: str, now: datetime, source: str = "kafka", batch: str = "stream") -> tuple | str:
+    """Validate one message. Returns the bronze row, or a rejection reason.
+
+    `source` and `batch` are parameters rather than constants because the same
+    validation now serves two doors into bronze: the Kafka consumer and the HTTP
+    endpoint the backend posts to. Both must reject the same things for the same
+    reasons — a second implementation would drift, and the one that drifts is
+    the one that starts accepting a field it should not.
+    """
     try:
         record: dict[str, Any] = json.loads(raw)
         payload_json = record.get("payload", "{}")
@@ -204,8 +211,8 @@ def _parse(raw: str, now: datetime) -> tuple | str:
         envelope.demo_mode,
         payload_json,
         envelope.occurred_at.date(),
-        "kafka",
-        "stream",
+        source,
+        batch,
     )
 
 

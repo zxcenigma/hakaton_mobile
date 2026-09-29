@@ -16,9 +16,7 @@ from monetka.ml.diagnostics import RELATIVE_HORIZON_FLOOR, recommend_horizon
 
 
 def frame(pairs: list[tuple[int, float]]) -> pd.DataFrame:
-    return pd.DataFrame(
-        [{"period_no": period, "accuracy": accuracy} for period, accuracy in pairs]
-    )
+    return pd.DataFrame([{"period_no": period, "accuracy": accuracy} for period, accuracy in pairs])
 
 
 class TestRecommendHorizon:

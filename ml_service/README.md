@@ -4,7 +4,7 @@
 
 <br>
 
-![tests](https://img.shields.io/badge/tests-309%20passed-E5C78F?style=flat-square&labelColor=211E1C)
+![tests](https://img.shields.io/badge/tests-321%20passed-E5C78F?style=flat-square&labelColor=211E1C)
 ![coverage](https://img.shields.io/badge/coverage-82%25-E5C78F?style=flat-square&labelColor=211E1C)
 ![dbt](https://img.shields.io/badge/dbt-58%20tests-E5C78F?style=flat-square&labelColor=211E1C)
 ![quality](https://img.shields.io/badge/data%20quality-14%20checks-E5C78F?style=flat-square&labelColor=211E1C)
