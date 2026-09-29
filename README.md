@@ -8,7 +8,7 @@
  - **Frontend** - Flutter
  - **Backend** - Python/FastAPI/Pydantic/SQLAlchemy/PostgreSQL/Alembic/Docker (1 сервис - монолит, разделенный хорошей структурой модулей)
 
-
+```text
 /hakaton_mobile
 ├── .temp/
 │   ├── seed_user_activity.py # Тестовое наполнение пользователя для ИИ
@@ -30,6 +30,7 @@
 ├── .gitignore
 ├── README.md
 └── backend_init.sh           # Запуск и остановка для Backend
+```
 
 ### Запуск локального Backend
 

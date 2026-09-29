@@ -1,5 +1,6 @@
 # FastAPI сервис-монолит "MonoAPI"
 
+```text
 /monoapi
 ├── apps/
 │   ├── fastapi.py            # Переопределение класса fastapi
@@ -12,4 +13,5 @@
 ├── web_server/               # Настройки запуска uvicorn веб-сервера 
 ├── workers/                  # Настройки под celery (здесь не актуально) 
 ├── run_api.py                # Точка запуска для Docker
-├── README.md
+└── README.md
+```text
