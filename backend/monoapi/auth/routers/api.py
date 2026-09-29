@@ -16,7 +16,7 @@ from monoapi.auth.schemas import (
     SignUpSchema,
     TokenInfoSchema,
 )
-from monoapi.auth.services import (
+from monoapi.auth.services.auth_service import (
     EmailVerificationService,
     LogoutService,
     RefreshService,

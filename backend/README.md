@@ -19,8 +19,11 @@ python -m monoapi.run_api --no-reload --workers 2
 
 Быстрый запуск из корня репозитория:
 
-```sh
-./backend_init.sh
+```bash
+bash backend_init.sh up               # поднять всё
+bash backend_init.sh up api db redis  # поднять выбранные сервисы
+bash backend_init.sh down             # остановить и удалить все контейнеры
+bash backend_init.sh down api         # остановить и удалить только API
 ```
 
 Скрипт создаёт отсутствующие JWT-ключи и `.env`, создаёт внешнюю сеть

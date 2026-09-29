@@ -1,7 +1,7 @@
 import json
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import Any, TypeVar, AsyncGenerator
+from typing import Any, TypeVar, AsyncGenerator, ClassVar
 from uuid import UUID
 
 from itsdangerous import URLSafeSerializer
@@ -78,6 +78,8 @@ class BaseService[TResponse](BaseModel, ABC):
 class BaseSessionService[TResponse](BaseService[TResponse], ABC):
     """Base service with managed database session."""
 
+    use_redis: ClassVar[bool] = True
+
     def __init__(self, /, **data: Any) -> None:
         super().__init__(**data)
 
@@ -108,6 +110,8 @@ class BaseSessionService[TResponse](BaseService[TResponse], ABC):
     async def __call__(self, *args, **kwargs) -> TResponse:
         async with async_session_manager.session() as session:
             self._session = session
+            if not self.use_redis:
+                return await self.process(*args, **kwargs)
             async with redis_session_manager.get_client() as redis_session:
                 self._redis_session = redis_session
 
@@ -258,11 +262,9 @@ class BaseSuperuserAuthenticatedService[TResponse](
 
 
 class AuthSessionService[TResponse](BaseSessionService[TResponse], ABC):
-    serializer: URLSafeSerializer | None = None
-
-    def __init__(self, /, **data: Any) -> None:
-        super().__init__(**data)
-
-        self.serializer = URLSafeSerializer(
+    @property
+    def serializer(self) -> URLSafeSerializer:
+        # Login/logout do not need email settings. Resolve only for email flows.
+        return URLSafeSerializer(
             settings.email_settings.email_token_secret.get_secret_value()
         )

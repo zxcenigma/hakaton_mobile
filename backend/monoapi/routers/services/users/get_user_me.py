@@ -3,7 +3,7 @@ from datetime import datetime
 from pydantic import EmailStr, Field, UUID4
 
 from monoapi.helpers.pydantic import BaseModel
-from monoapi.routers.services import BaseUserAuthenticatedService
+from monoapi.routers.services._base import BaseUserAuthenticatedService
 
 
 class GetUserMeResponse(BaseModel):

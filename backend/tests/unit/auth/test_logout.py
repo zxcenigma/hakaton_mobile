@@ -4,7 +4,7 @@ from fastapi import FastAPI, Response
 from httpx import ASGITransport, AsyncClient
 
 from monoapi.auth.routers.api import clear_refresh_cookie, router, set_refresh_cookie
-from monoapi.auth.services import LogoutService
+from monoapi.auth.services.auth_service import LogoutService
 from monoapi.core import settings
 
 

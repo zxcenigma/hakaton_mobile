@@ -6,7 +6,7 @@ from monoapi.auth.security import oauth2_scheme
 from monoapi.routers.exceptions import UnauthorizedResponse
 
 
-from monoapi.routers.services.users import (
+from monoapi.routers.services.users.get_user_me import (
     GetUserMeResponse,
     GetUserMeService,
 )

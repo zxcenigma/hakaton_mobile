@@ -5,7 +5,7 @@ from monoapi.auth.repositories import user_repo
 from monoapi.auth.utils import hash_password
 from monoapi.db.models import UserModel
 from monoapi.helpers.pydantic import BaseModel
-from monoapi.routers.services import BaseSuperuserAuthenticatedService
+from monoapi.routers.services._base import BaseSuperuserAuthenticatedService
 
 USER_MANAGER_EMAILS = {"user@example.ru"}
 

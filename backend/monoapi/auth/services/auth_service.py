@@ -11,14 +11,15 @@ from monoapi.auth.schemas import (
 )
 from monoapi.auth.utils import decode_jwt, hash_password, verify_password
 from monoapi.db.models import UserModel
-from monoapi.routers.services import AuthSessionService
-from monoapi.workers.celery.tasks import send_confirmation_email
+from monoapi.routers.services._base import AuthSessionService
 
 
 class SignUpService(AuthSessionService[ResponseSignUp]):
     request_data: SignUpSchema
 
     async def process(self) -> ResponseSignUp:
+        from monoapi.workers.celery.tasks import send_confirmation_email
+
         existing = await user_repo.get_user_by_email(
             self.async_session, self.request_data.email
         )
