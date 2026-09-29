@@ -31,7 +31,7 @@ from typing import Any
 from monetka.common.config import get_settings
 from monetka.common.events import EventEnvelope
 from monetka.common.logging import configure_logging, get_logger
-from monetka.ingestion.bronze import _ARROW_SCHEMA, _COLUMNS, BRONZE_DDL
+from monetka.ingestion.bronze import _ARROW_SCHEMA, _COLUMNS, apply_bronze_schema
 from monetka.ingestion.warehouse import connect
 
 log = get_logger("ingestion.stream")
@@ -57,7 +57,7 @@ def _flush(rows: list[tuple], dead_letters: list[tuple], batch_id: str) -> int:
         return 0
 
     with connect() as conn:
-        conn.execute(BRONZE_DDL)
+        apply_bronze_schema(conn)
         before_row = conn.execute("SELECT count(*) FROM bronze.raw_events").fetchone()
         before = int(before_row[0]) if before_row else 0
 
@@ -192,8 +192,24 @@ def _parse(raw: str, now: datetime, source: str = "kafka", batch: str = "stream"
     """
     try:
         record: dict[str, Any] = json.loads(raw)
-        payload_json = record.get("payload", "{}")
-        envelope = EventEnvelope.model_validate({**record, "payload": json.loads(payload_json)})
+        # `payload` arrives two ways and both are legitimate. Kafka carries it as
+        # a JSON string, because the topic is a stream of bytes and nesting it
+        # would mean double-decoding on every consumer. An HTTP caller posting
+        # JSON naturally sends a nested object — asking them to stringify one
+        # field inside a JSON body would be a strange thing to require.
+        #
+        # Accepting only the string form is what this did, and it rejected every
+        # event the backend sent with a TypeError that named JSON rather than the
+        # mismatch. The unit tests did not catch it because the fixture copied
+        # the Kafka shape instead of the shape a caller would actually send.
+        raw_payload = record.get("payload", "{}")
+        payload = json.loads(raw_payload) if isinstance(raw_payload, str) else raw_payload
+        payload_json = (
+            raw_payload
+            if isinstance(raw_payload, str)
+            else json.dumps(raw_payload, ensure_ascii=False)
+        )
+        envelope = EventEnvelope.model_validate({**record, "payload": payload})
     except Exception as exc:
         return f"{type(exc).__name__}: {exc}"[:500]
 

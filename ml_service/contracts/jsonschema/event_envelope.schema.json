@@ -31,15 +31,31 @@
   "description": "Common header shared by every telemetry event.",
   "properties": {
     "android_api_level": {
-      "maximum": 40,
-      "minimum": 26,
-      "title": "Android Api Level",
-      "type": "integer"
+      "anyOf": [
+        {
+          "maximum": 40,
+          "minimum": 26,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Android Api Level"
     },
     "app_version": {
-      "pattern": "^\\d+\\.\\d+\\.\\d+$",
-      "title": "App Version",
-      "type": "string"
+      "anyOf": [
+        {
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "App Version"
     },
     "demo_mode": {
       "default": false,
@@ -104,9 +120,7 @@
     "occurred_at",
     "profile_pseudo_id",
     "session_id",
-    "period_no",
-    "app_version",
-    "android_api_level"
+    "period_no"
   ],
   "title": "EventEnvelope",
   "type": "object",

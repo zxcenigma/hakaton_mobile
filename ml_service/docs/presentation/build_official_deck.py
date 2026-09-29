@@ -425,7 +425,10 @@ def fill_about_team(slide, team: dict) -> None:
 def fill_members(slide, team: dict) -> None:
     """Slide 9 — five member cards. Nothing here can be filled for the team."""
     set_text(title_of(slide), "КОМАНДА")
-    members = list(team.get("members") or [])
+    # Blank stubs in the YAML are not team members.
+    members = [
+        m for m in (team.get("members") or []) if str((m or {}).get("name", "")).strip()
+    ]
     name_boxes = [
         s for s in shapes_named(slide, "Текст 8") if s.text_frame.text.startswith("Имя")
     ]
@@ -440,12 +443,22 @@ def fill_members(slide, team: dict) -> None:
             f"в team.yaml {len(members)} участников, а в шаблоне {len(name_boxes)} карточек"
         )
 
+    # A card beyond the listed members is emptied rather than marked. The
+    # template always has five, and a team of two would otherwise submit three
+    # cards shouting ‹ЗАПОЛНИТЬ› — which reads as unfinished rather than as
+    # «there are two of us». Contacts of a *listed* member stay marked, because
+    # those really are missing.
     for index, shape in enumerate(name_boxes):
-        member = members[index] if index < len(members) else {}
-        set_text(shape, value(member, "name", "Имя Фамилия"))
+        if index >= len(members):
+            set_text(shape, "")
+            continue
+        set_text(shape, value(members[index], "name", "Имя Фамилия"))
 
     for index, shape in enumerate(detail_boxes):
-        member = members[index] if index < len(members) else {}
+        if index >= len(members):
+            set_text(shape, "")
+            continue
+        member = members[index]
         set_text(
             shape,
             [

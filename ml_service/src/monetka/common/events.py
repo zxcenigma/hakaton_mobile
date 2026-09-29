@@ -287,8 +287,17 @@ class EventEnvelope(BaseModel):
     #: Ordinal of the game period this event belongs to (ТЗ §2.5.5).
     period_no: int = Field(ge=0, le=10_000)
 
-    app_version: str = Field(pattern=r"^\d+\.\d+\.\d+$")
-    android_api_level: int = Field(ge=26, le=40)  # ТЗ §3.1.1 — Android 8.0+ (API 26)
+    #: Device context. Optional, and the reason is worth stating: these two
+    #: fields describe the handset, and only the app can know them. An event
+    #: relayed by the backend — or backfilled out of its database — genuinely
+    #: has no device behind it, and filling in a plausible `33` would put a
+    #: fabricated value into a typed column that analysis later trusts.
+    #:
+    #: Absent therefore means «did not come from a device», which is a fact
+    #: worth keeping. `quality` flags it if the share of such events grows,
+    #: so this cannot quietly become the norm.
+    app_version: str | None = Field(default=None, pattern=r"^\d+\.\d+\.\d+$")
+    android_api_level: int | None = Field(default=None, ge=26, le=40)
 
     #: True when the event originates from the expert demo mode (ТЗ §2.5.13).
     #: Demo traffic is kept out of every analytical mart.
@@ -607,8 +616,8 @@ def build_event(
     session_id: uuid.UUID,
     period_no: int,
     occurred_at: datetime,
-    app_version: str = "0.1.0",
-    android_api_level: int = 33,
+    app_version: str | None = "0.1.0",
+    android_api_level: int | None = 33,
     demo_mode: bool = False,
     ingested_at: datetime | None = None,
 ) -> EventEnvelope:
@@ -618,7 +627,7 @@ def build_event(
     simulator passes it explicitly because it produces a historical backfill,
     where the delivery delay is part of what is being modelled.
     """
-    if not _SEMVER.match(app_version):
+    if app_version is not None and not _SEMVER.match(app_version):
         raise ValueError(f"app_version must be semver, got {app_version!r}")
     return EventEnvelope(
         event_name=event_name,

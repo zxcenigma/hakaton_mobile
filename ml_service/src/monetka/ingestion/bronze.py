@@ -24,6 +24,7 @@ than trusting either alone.
 
 from __future__ import annotations
 
+import contextlib
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -100,8 +101,9 @@ CREATE TABLE IF NOT EXISTS bronze.raw_events (
     profile_pseudo_id   UUID       NOT NULL,
     session_id          UUID       NOT NULL,
     period_no           INTEGER    NOT NULL,
-    app_version         VARCHAR    NOT NULL,
-    android_api_level   INTEGER    NOT NULL,
+    -- Nullable: an event relayed by the backend has no device behind it.
+    app_version         VARCHAR,
+    android_api_level   INTEGER,
     demo_mode           BOOLEAN    NOT NULL,
     payload             JSON       NOT NULL,
     event_date          DATE       NOT NULL,
@@ -117,6 +119,32 @@ CREATE TABLE IF NOT EXISTS bronze.rejected_events (
     _batch_id     VARCHAR     NOT NULL
 );
 """
+
+#: Applied after `BRONZE_DDL`, every time, in order.
+#:
+#: `CREATE TABLE IF NOT EXISTS` does nothing to a table that already exists, so
+#: editing the DDL above changes only *new* warehouses. Making `app_version`
+#: nullable in the string left every existing warehouse rejecting the events it
+#: was edited to accept, with `NOT NULL constraint failed` — which names the
+#: column and not the reason.
+#:
+#: Each statement must be safe to run repeatedly: they run on every connection,
+#: and failures are swallowed because most of them are «already applied».
+BRONZE_MIGRATIONS: tuple[str, ...] = (
+    "ALTER TABLE bronze.raw_events ALTER COLUMN app_version DROP NOT NULL",
+    "ALTER TABLE bronze.raw_events ALTER COLUMN android_api_level DROP NOT NULL",
+)
+
+
+def apply_bronze_schema(conn: object) -> None:
+    """Create the bronze tables and bring an existing one up to date."""
+    conn.execute(BRONZE_DDL)  # type: ignore[attr-defined]
+    for statement in BRONZE_MIGRATIONS:
+        # «Уже применено» и «не получилось» здесь неразличимы и одинаково не
+        # важны: следующая же вставка скажет правду, а падать на старте из-за
+        # повторно применённой миграции — худший из вариантов.
+        with contextlib.suppress(Exception):
+            conn.execute(statement)  # type: ignore[attr-defined]
 
 
 @dataclass(frozen=True, slots=True)
@@ -190,7 +218,7 @@ def load_bronze(source_root: Path) -> LoadStats:
                 )
 
     with connect() as conn:
-        conn.execute(BRONZE_DDL)
+        apply_bronze_schema(conn)
         before = row_count(conn, "bronze", "raw_events")
 
         if accepted:

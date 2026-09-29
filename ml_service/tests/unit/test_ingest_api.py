@@ -165,3 +165,41 @@ def inspect_signature(func) -> str:
     import inspect
 
     return str(inspect.signature(func))
+
+
+class TestPayloadShapes:
+    """`payload` arrives two ways, and both have to work.
+
+    Kafka carries it as a JSON string — the topic is bytes, and nesting would
+    mean double-decoding on every consumer. An HTTP caller posting JSON sends a
+    nested object, because requiring one stringified field inside a JSON body
+    would be strange.
+
+    Only the string form was accepted, and every event the backend sent came
+    back rejected with a TypeError naming JSON rather than the mismatch. The
+    first version of these tests missed it: the fixture copied the Kafka shape
+    instead of the shape a caller would actually send.
+    """
+
+    def test_a_nested_payload_object_is_accepted(self, client: TestClient) -> None:
+        nested = event(payload={"cold_start": True, "startup_latency_ms": 120})
+        body = client.post("/v1/events:batch", json={"events": [nested]}).json()
+        assert body["accepted"] == 1, body.get("rejections")
+
+    def test_a_stringified_payload_is_still_accepted(self, client: TestClient) -> None:
+        body = client.post("/v1/events:batch", json={"events": [event()]}).json()
+        assert body["accepted"] == 1, body.get("rejections")
+
+    def test_both_shapes_produce_the_same_stored_row(self, client: TestClient) -> None:
+        """Otherwise the same event would look different depending on its door."""
+        from monetka.ingestion.warehouse import connect
+
+        payload = {"cold_start": True, "startup_latency_ms": 120}
+        client.post("/v1/events:batch", json={"events": [event(payload=payload)]})
+        client.post("/v1/events:batch", json={"events": [event(payload=json.dumps(payload))]})
+
+        with connect(read_only=True) as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT payload FROM bronze.raw_events ORDER BY payload"
+            ).fetchall()
+        assert len(rows) == 1, f"одно и то же событие сохранилось по-разному: {rows}"
