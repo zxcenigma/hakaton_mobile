@@ -1,29 +1,36 @@
-# Airflow image with the Monetka package installed.
+# Airflow, который оркеструет конвейер, но не содержит его.
 #
-# The DAG tasks import `monetka.*` directly rather than shelling out, so the
-# package has to live in the scheduler's environment. Airflow pins a large part
-# of the dependency tree, so the constraint file is used — installing without it
-# resolves to versions Airflow does not support and breaks at import time.
+# Предыдущая версия ставила сюда сам пакет `monetka` со всеми зависимостями, и
+# образ не собирался вообще: Airflow закрепляет большую часть дерева своим
+# constraint-файлом, а платформе нужен pandas>=2.2, которого в закреплениях нет.
+# Поднять версию Airflow не помогает — конфликт тот же и на 2.10.
+#
+# Чинить это подбором версий — тупик, который придётся проходить заново при
+# каждом обновлении любой из сторон. Правильный ответ другой: оркестратору не
+# нужно дерево зависимостей конвейера. Он должен уметь запустить шаг и узнать,
+# чем тот закончился.
+#
+# Поэтому здесь ставится только провайдер Docker, а задачи DAG запускают образ
+# `monetka-api` — тот самый, что работает в продакшене. Побочный эффект приятный:
+# Airflow оркеструет ровно то, что потом и поедет, а не свою копию с другими
+# версиями библиотек.
 
 FROM apache/airflow:2.9.3-python3.11
-
-USER root
-RUN apt-get update \
- && apt-get install -y --no-install-recommends build-essential librdkafka-dev \
- && rm -rf /var/lib/apt/lists/*
-USER airflow
 
 ARG AIRFLOW_VERSION=2.9.3
 ARG PYTHON_VERSION=3.11
 ENV CONSTRAINT_URL="https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt"
 
-COPY --chown=airflow:root pyproject.toml README.md /opt/monetka/
-COPY --chown=airflow:root src /opt/monetka/src
-COPY --chown=airflow:root content /opt/monetka/content
-COPY --chown=airflow:root transform /opt/monetka/transform
-
+# Единственная добавка. Она есть в закреплениях Airflow, поэтому конфликтовать
+# тут нечему.
 RUN pip install --no-cache-dir --constraint "${CONSTRAINT_URL}" \
-      "/opt/monetka[stream,transform]"
+      "apache-airflow-providers-docker"
 
-ENV MONETKA_RUN_MODE=compose \
-    PYTHONPATH=/opt/monetka/src
+ENV MONETKA_RUN_MODE=compose
+
+# Базовый образ и так работает под `airflow`, но пусть это будет написано: иначе
+# `monetka stack-check` не может отличить «образ не из-под root» от «никто не
+# подумал». В compose пользователь переопределяется на root — ровно для доступа
+# к сокету демона, и это отдельное задокументированное решение, а не свойство
+# образа.
+USER airflow

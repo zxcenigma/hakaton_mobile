@@ -305,13 +305,28 @@ services:
       AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "false"
       _AIRFLOW_WWW_USER_USERNAME: ${AIRFLOW_ADMIN_USER:-admin}
       _AIRFLOW_WWW_USER_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:-admin}
+      # DockerOperator просит демон поднять соседний контейнер, и монтирования
+      # разрешает хост. Поэтому путям нужно быть хостовыми, а не теми, что
+      # видно изнутри Airflow. Значение по умолчанию — для разработки; на
+      # другой машине задаётся в `.env`.
+      MONETKA_HOST_DATA_DIR: ${MONETKA_HOST_DATA_DIR:-/root/monetka/data}
+      MONETKA_HOST_ARTIFACTS_DIR: ${MONETKA_HOST_ARTIFACTS_DIR:-/root/monetka/artifacts}
+      MONETKA_PIPELINE_IMAGE: ${MONETKA_PIPELINE_IMAGE:-monetka-api:latest}
     command: standalone
     ports:
       - "8081:8080"
+    # Нужен root: сокет демона принадлежит root:docker, а в образе Airflow
+    # пользователь `airflow` в эту группу не входит, и её gid на разных хостах
+    # разный — добавлять его сборкой значит привязать образ к одной машине.
+    user: root
     volumes:
       - ./orchestration/dags:/opt/airflow/dags:ro
       - ./data:/app/data
       - ./artifacts:/app/artifacts
+      # Доступ к демону — это доступ к хосту. Оправдан тем, что оркестратор
+      # обязан запускать шаги конвейера как отдельные контейнеры; за пределами
+      # локального стека так делать не стоит, там место KubernetesExecutor.
+      - /var/run/docker.sock:/var/run/docker.sock
 
   # ------------------------------------------------------- observability ---
   prometheus:
