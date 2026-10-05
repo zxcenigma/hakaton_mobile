@@ -1,0 +1,133 @@
+# Склад на одном томе с одним писателем.
+#
+# DuckDB — файл, и писатель у него может быть только один. В compose это было
+# неявным ограничением, здесь оно становится явным: том ReadWriteOnce и ровно
+# одна реплика. Попытка поставить две даст второй под в Pending — и это
+# честнее, чем тихая порча файла.
+#
+# Именно здесь в настоящем проде DuckDB меняют на Trino поверх Iceberg, и у
+# платформы это уже есть — то есть выход из ограничения заложен.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: monetka-data
+  namespace: monetka
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: monetka-artifacts
+  namespace: monetka
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: monetka-api
+  namespace: monetka
+spec:
+  selector:
+    app: monetka-api
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monetka-api
+  namespace: monetka
+spec:
+  # Одна реплика — следствие тома RWO выше, а не осторожности.
+  replicas: 1
+  selector:
+    matchLabels:
+      app: monetka-api
+  template:
+    metadata:
+      labels:
+        app: monetka-api
+    spec:
+      # В compose это делал отдельный сервис workspace-init: том приходит
+      # принадлежащим root, а контейнер работает под uid 999. initContainer —
+      # прямой аналог, только он часть пода и гарантированно отрабатывает до
+      # основного контейнера, а не «примерно тогда же».
+      initContainers:
+        - name: fix-permissions
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              mkdir -p /data /artifacts
+              chown -R 999:999 /data /artifacts
+              echo "права выставлены"
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: artifacts, mountPath: /artifacts }
+          securityContext:
+            runAsUser: 0
+      containers:
+        - name: api
+          image: monetka-api:latest
+          # В kind образ берётся из локального демона после `kind load`, в
+          # облаке — из реестра. IfNotPresent работает в обоих случаях; Always
+          # сломал бы локальную разработку попыткой сходить в несуществующий
+          # реестр.
+          imagePullPolicy: IfNotPresent
+          command: ["monetka", "serve", "--host", "0.0.0.0", "--port", "8000"]
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef: { name: monetka-config }
+            - secretRef: { name: monetka-secrets }
+          env:
+            - name: MONETKA_DATA_DIR
+              value: /app/data
+            - name: MONETKA_ARTIFACTS_DIR
+              value: /app/artifacts
+          resources:
+            requests: { memory: "384Mi", cpu: "100m" }
+            limits:   { memory: "768Mi", cpu: "1" }
+          # Три пробы, три разных вопроса.
+          #
+          # startup даёт время подняться: сервис читает модели с диска, и на
+          # медленном томе это занимает секунды. Без неё liveness начала бы
+          # убивать под раньше, чем он успел запуститься, — классический
+          # CrashLoopBackOff на пустом месте.
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            failureThreshold: 30
+            periodSeconds: 2
+          # readiness убирает под из балансировки, не убивая его.
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+          # liveness убивает — поэтому проверяет только сам процесс.
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 20
+            failureThreshold: 3
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - { name: data, mountPath: /app/data }
+            - { name: artifacts, mountPath: /app/artifacts }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: monetka-data }
+        - name: artifacts
+          persistentVolumeClaim: { claimName: monetka-artifacts }

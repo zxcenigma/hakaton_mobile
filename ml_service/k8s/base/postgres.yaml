@@ -1,0 +1,91 @@
+# Postgres — StatefulSet, а не Deployment, и это не вкусовщина.
+#
+# Deployment считает поды взаимозаменяемыми. Для базы это неверно: под №1 и
+# под №2 — две разные базы, и если дать им один том ReadWriteOnce, второй
+# просто не запустится, а если том окажется общим — они испортят данные друг
+# друга. StatefulSet даёт предсказуемые имена, порядок запуска и персональный
+# том каждому поду.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: monetka
+spec:
+  # Headless: DNS отдаёт адрес конкретного пода (`postgres-0.postgres`), а не
+  # балансирует между ними. Для базы балансировка — последнее, что нужно.
+  clusterIP: None
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: monetka
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: monetka
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef: { name: monetka-secrets, key: POSTGRES_USER }
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: monetka-secrets, key: POSTGRES_PASSWORD }
+            # Образ postgres инициализирует кластер в корне тома. Если том
+            # смонтирован в /var/lib/postgresql/data и там окажется `lost+found`
+            # (а он окажется на многих файловых системах), инициализация
+            # откажется работать. Подкаталог решает это раз и навсегда.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          # requests равны limits: база получает класс Guaranteed и её вытеснят
+          # последней, когда на ноде кончится память. Для stateful-сервиса это
+          # правильный размен — он стоит дороже, но его перезапуск дороже ещё.
+          resources:
+            requests: { memory: "256Mi", cpu: "100m" }
+            limits:   { memory: "256Mi", cpu: "500m" }
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "monetka", "-h", "127.0.0.1"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          # Liveness проверяет только сам процесс и ничего больше. Проба,
+          # которая ходит в зависимости, превращает их недоступность в
+          # перезапуск здорового пода.
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "monetka", "-h", "127.0.0.1"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  # Том создаётся на каждый под и переживает его пересоздание. Более того, он
+  # переживает удаление самого StatefulSet — это защита от потери данных, но
+  # она же объясняет «почему новый под видит старые данные».
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
