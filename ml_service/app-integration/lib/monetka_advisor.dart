@@ -318,9 +318,14 @@ class BehaviourSegmentModel {
   /// Predicts the segment, or abstains.
   ///
   /// Abstains when the period is outside the model's validated range. Archetypes
-  /// converge as a child learns — held-out accuracy falls from 0.89 at period 3
-  /// to 0.54 at period 12 — so past the horizon the honest answer is «I don't
-  /// know», and the rule-based hint is the right thing to show anyway.
+  /// converge as a child learns — measured held-out accuracy falls from 0.769 at
+  /// period 3 to 0.462 at period 10 — so past the horizon the honest answer is
+  /// «I don't know», and the rule-based hint is the right thing to show anyway.
+  ///
+  /// The horizon itself is not hardcoded here: it comes from the model card,
+  /// which the exporter fills from that measurement. Writing the number into
+  /// the app would mean the app and the model could disagree about where the
+  /// model stops working. See docs/ml-cards/behaviour_segment.md.
   Segment predict(PeriodSnapshot snapshot) {
     final horizon = _card.maxPeriodNo;
     if (horizon != null &&
