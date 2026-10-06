@@ -7,3 +7,8 @@
 # shell script fails with `bad interpreter`, so they are pinned here.
 .github/** text eol=lf
 ml_service/** text=auto eol=lf
+
+# Прокси перед API: читается Docker-ом на Linux. Пути перечислены поимённо, а
+# не каталогом, чтобы не задеть остальные файлы бэкенда, которые ведёт Саша.
+backend/docker/Caddyfile text eol=lf
+backend/docker/docker-compose.proxy.yaml text eol=lf

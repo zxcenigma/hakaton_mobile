@@ -1,0 +1,52 @@
+# Обратный прокси с TLS перед API.
+#
+# Отдельный файл, а не правка docker-compose.yaml: прокси живёт своим циклом
+# (его перезапускают при смене домена, API при этом трогать незачем), и сеть
+# hakaton_mobile_proxy в основном compose уже объявлена как external — то есть
+# место под прокси там было оставлено изначально.
+#
+# Поднять:
+#
+#   docker network create hakaton_mobile_proxy    # один раз, если ещё нет
+#   docker compose -f backend/docker/docker-compose.proxy.yaml up -d
+#
+# Первый запуск занимает до минуты: Caddy получает сертификат у Let's Encrypt
+# через проверку на порту 80. Порт 80 должен быть открыт — проверено, открыт.
+
+name: hakaton_mobile_proxy
+
+services:
+
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: hakaton_mobile_caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Сертификаты переживают пересоздание контейнера. Без этого тома каждый
+      # `up` заново ходил бы в Let's Encrypt — и через пять раз в неделю
+      # упёрся бы в их лимит, оставив сервис без сертификата на неделю.
+      - caddy_data:/data
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+    networks:
+      - hakaton_mobile_proxy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:80"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  hakaton_mobile_proxy:
+    name: hakaton_mobile_proxy
+    external: true
+
+volumes:
+  caddy_data:
+  caddy_config:
+  caddy_logs:
